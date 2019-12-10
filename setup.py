@@ -38,7 +38,7 @@ setup(
     packages=["chimedb.dataflag"],
     zip_safe=False,
     install_requires=[
-        "chimedb @ git+ssh://git@github.com/chime-experiment/chimedb.git",
+        "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
         "peewee >= 3.10",
         "future",
         "Click",

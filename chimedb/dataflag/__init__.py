@@ -8,4 +8,3 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 __version__ = "0.1.0"
 
 from .orm import DataFlagType, DataFlag
-

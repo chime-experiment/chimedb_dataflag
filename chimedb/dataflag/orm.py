@@ -78,7 +78,7 @@ class DataFlag(base_model):
     type = pw.ForeignKeyField(DataFlagType, backref="flags")
 
     start_time = pw.DoubleField()
-    finish_time = pw.DoubleField()
+    finish_time = pw.DoubleField(null=True)
 
     metadata = JSONDictField(null=True)
 

@@ -64,7 +64,22 @@ class Time(click.ParamType):
 
     name = "time"
 
+    def __init__(self, allow_null=False):
+        super().__init__()
+        self.allow_null = allow_null
+
     def convert(self, value, param, ctx):
+
+        null_values = ["null", "Null", "none", "None"]
+
+        if value in null_values:
+            if self.allow_null:
+                # Return the string null here as we need to know whether an
+                # argument was not supplied (i.e. None), or whether it was set
+                # to be missing
+                return "null"
+            else:
+                self.fail("A null time is not allowed.")
 
         try:
             return arrow.get(value)
@@ -119,6 +134,7 @@ TIMEZONE = click.Choice(list(tzmap.keys()) + ["unix"], case_sensitive=False)
 FTYPE = FType()
 FLAG = Flag()
 TIME = Time()
+NULL_TIME = Time(allow_null=True)
 FREQ = ListOfType("frequency list", int)
 INPUTS = ListOfType("input list", int)
 JSON = JsonDictType()
@@ -230,7 +246,10 @@ def flag_list(type_, time, start, finish):
 
     # Add the filters on start/end times
     if start:
-        query = query.where(orm.DataFlag.finish_time >= start.timestamp)
+        query = query.where(
+            (orm.DataFlag.finish_time >= start.timestamp)
+            | orm.DataFlag.finish_time.is_null()
+        )
     if finish:
         query = query.where(orm.DataFlag.start_time <= finish.timestamp)
 
@@ -265,7 +284,7 @@ def flag_show(flag, time):
 @flag.command("create")
 @click.argument("type_", type=FTYPE, metavar="TYPE")
 @click.argument("start", type=TIME)
-@click.argument("finish", type=TIME)
+@click.argument("finish", type=NULL_TIME)
 @click.option("--description", help="Description of flag.", default=None)
 @click.option(
     "--user",
@@ -289,6 +308,10 @@ def create_flag(
 ):
     """Create a new data flag with given TYPE and START and FINISH times.
 
+    Times can be supplied in any format recognized by the `arrow` library. Using
+    the YYYY-MM-DDTHH:MM:SSZ format is recommended. If the flag has not ended,
+    supply the string 'null' instead.
+
     Optionally you can set the instrument, inputs and frequencies effected as
     well as generic metadata.
     """
@@ -298,7 +321,7 @@ def create_flag(
 
     flag.type = type_
     flag.start_time = start.timestamp
-    flag.finish_time = finish.timestamp
+    flag.finish_time = finish.timestamp if finish != "null" else None
 
     if metadata is None:
         metadata = {}
@@ -340,8 +363,18 @@ def create_flag(
     default=None,
     help="Change the type of the flag.",
 )
-@click.option("--start", type=TIME, default=None, help="Change the flag start time.")
-@click.option("--finish", type=TIME, default=None, help="Change the flag end time.")
+@click.option(
+    "--start",
+    type=TIME,
+    default=None,
+    help="Change the flag start time in format YYYY-MM-DDTHH:MM:SSZ.",
+)
+@click.option(
+    "--finish",
+    type=TIME,
+    default=None,
+    help="Change the flag end time in format YYYY-MM-DDTHH:MM:SSZ. If the flag has not ended supply the string 'null'.",
+)
 @click.option(
     "--instrument",
     type=click.Choice(["chime", "pathfinder"]),
@@ -386,7 +419,7 @@ def edit_flag(flag, type_, start, finish, instrument, freq, inputs, metadata, fo
         flag.start_time = start.timestamp
 
     if finish:
-        flag.finish_time = finish.timestamp
+        flag.finish_time = finish.timestamp if finish != "null" else None
 
     if metadata:
         flag.metadata.update(metadata)
@@ -416,6 +449,8 @@ def edit_flag(flag, type_, start, finish, instrument, freq, inputs, metadata, fo
 
 
 def format_time(time, timefmt="utc"):
+    if time is None:
+        return "null"
     if timefmt == "unix":
         return time
     return arrow.get(time).to(tzmap[timefmt]).format()

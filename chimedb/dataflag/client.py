@@ -1,6 +1,8 @@
 import json
 import re
 import ast
+import os
+import pwd
 
 import click
 import arrow
@@ -264,6 +266,12 @@ def flag_show(flag, time):
 @click.argument("type_", type=FTYPE, metavar="TYPE")
 @click.argument("start", type=TIME)
 @click.argument("finish", type=TIME)
+@click.option("--description", help="Description of flag.", default=None)
+@click.option(
+    "--user",
+    help="User adding the flag. If not set explicitly this is looked up from the current username.",
+    default=None,
+)
 @click.option(
     "--instrument",
     type=click.Choice(["chime", "pathfinder"]),
@@ -276,7 +284,9 @@ def flag_show(flag, time):
     "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
 )
 @click.option("--force", is_flag=True, help="Create without prompting.")
-def create_flag(type_, start, finish, instrument, freq, inputs, metadata, force):
+def create_flag(
+    type_, start, finish, instrument, description, user, freq, inputs, metadata, force
+):
     """Create a new data flag with given TYPE and START and FINISH times.
 
     Optionally you can set the instrument, inputs and frequencies effected as
@@ -294,12 +304,17 @@ def create_flag(type_, start, finish, instrument, freq, inputs, metadata, force)
         metadata = {}
 
     # Add any optional metadata
+    if description:
+        metadata["description"] = description
     if instrument:
         metadata["instrument"] = instrument
     if inputs:
         metadata["inputs"] = inputs
     if freq:
         metadata["freq"] = freq
+
+    # Set the name of the user entering the flag
+    metadata["user"] = user if user else get_user()
 
     flag.metadata = metadata
 
@@ -332,6 +347,12 @@ def create_flag(type_, start, finish, instrument, freq, inputs, metadata, force)
     type=click.Choice(["chime", "pathfinder"]),
     help="Add/change an instrument.",
     default=None,
+)
+@click.option(
+    "--description", help="Add/change the description of the flag.", default=None
+)
+@click.option(
+    "--user", help="Change the record of the user that added the flag.", default=None
 )
 @click.option(
     "--freq",
@@ -370,7 +391,11 @@ def edit_flag(flag, type_, start, finish, instrument, freq, inputs, metadata, fo
     if metadata:
         flag.metadata.update(metadata)
 
-    # Add any optional metadata
+    # Edit any optional metadata
+    if description:
+        flag.metadata["description"] = description
+    if user:
+        flag.metadata["user"] = user
     if instrument:
         flag.metadata["instrument"] = instrument
     if inputs:
@@ -437,3 +462,11 @@ def format_type(type_):
     }
 
     return ansimarkup.parse(template.format(**tdict))
+
+
+def get_user():
+    return pwd.getpwuid(os.getuid()).pw_gecos.split(",")[0]
+
+
+if __name__ == "__main__":
+    cli()

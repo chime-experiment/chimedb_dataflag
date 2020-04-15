@@ -405,7 +405,19 @@ def create_flag(
 @click.option(
     "--force", type=bool, help="Change the flag without prompting.", default=None
 )
-def edit_flag(flag, type_, start, finish, instrument, freq, inputs, metadata, force):
+def edit_flag(
+    flag,
+    type_,
+    start,
+    finish,
+    instrument,
+    description,
+    user,
+    freq,
+    inputs,
+    metadata,
+    force,
+):
     """Edit the existing flag with ID.
 
     You can change all required and metadata parameters.

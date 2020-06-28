@@ -84,7 +84,7 @@ class Time(click.ParamType):
         try:
             return arrow.get(value)
         except arrow.parser.ParserError as e:
-            self.fail('Could not parse time "%s": %s' % (value, e.message))
+            self.fail('Could not parse time "%s": %s' % (value, e))
 
 
 class ListOfType(click.ParamType):

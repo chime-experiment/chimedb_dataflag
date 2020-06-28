@@ -38,7 +38,7 @@ class DataFlagType(base_model):
         An optional JSON object describing how this flag type is being generated.
     """
 
-    name = pw.CharField(max_length=64)
+    name = pw.CharField(max_length=64, unique=True)
     description = pw.TextField(null=True)
     metadata = JSONDictField(null=True)
 

@@ -302,7 +302,7 @@ def flag_show(flag, time):
 @click.option(
     "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
 )
-@click.option("--force", is_flag=True, help="Create without prompting.")
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_flag(
     type_, start, finish, instrument, description, user, freq, inputs, metadata, force
 ):
@@ -402,9 +402,7 @@ def create_flag(
 @click.option(
     "--metadata", type=JSON, help="Add/change the extra metadata.", default=None
 )
-@click.option(
-    "--force", type=bool, help="Change the flag without prompting.", default=None
-)
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def edit_flag(
     flag,
     type_,

@@ -8,6 +8,8 @@ python:
 notifications:
     email: false
 
+services:
+    - mysql
 
 before_install:
     - pip install black
@@ -17,6 +19,12 @@ before_install:
 install:
     - pip install .
 
+before_script:
+    - mysql -e "CREATE DATABASE test;"
+
 script:
     # Run black on all .py files in all subfolders
     - black --check .
+
+    # Set PYTHONPATH so that relative imports in click script work when pytest imports that
+    - PYTHONPATH=. pytest

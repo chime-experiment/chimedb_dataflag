@@ -11,12 +11,39 @@ import yaml
 import peewee as pw
 import ansimarkup
 
-from . import orm
+from chimedb.dataflag import orm, __version__
+from chimedb.dataflag.opinion import (
+    DataFlagOpinion,
+    DataFlagOpinionType,
+    DataFlagClient,
+    MediaWikiUser,
+    VotingJudge,
+)
+
 from chimedb.core.orm import connect_database
 
 
 # Custom parameter types for click arguments
 # ==========================================
+class OType(click.ParamType):
+    """Opinion type parameter for click."""
+
+    name = "opinion type"
+
+    def convert(self, value, param, ctx):
+
+        # Connect if needed
+        connect_database(read_write=False)
+
+        _typedict = {dt.name: dt for dt in DataFlagOpinionType.select()}
+
+        if value not in _typedict:
+            self.fail(
+                'opinion type "%s" unknown. See `cdf opinion_type list` for valid options.'
+                % value
+            )
+
+        return _typedict[value]
 
 
 class FType(click.ParamType):
@@ -54,6 +81,27 @@ class Flag(click.ParamType):
         except pw.DoesNotExist:
             self.fail(
                 'flag id "%i" unknown. See `cdf flag list` ' "for valid ids." % value
+            )
+
+        return f
+
+
+class Opinion(click.ParamType):
+    """Opinion parameter for click."""
+
+    name = "opinion"
+
+    def convert(self, value, param, ctx):
+
+        # Connect if needed
+        connect_database(read_write=False)
+
+        try:
+            f = DataFlagOpinion.get(id=value)
+        except pw.DoesNotExist:
+            self.fail(
+                'opinion id "%s" unknown. See `cdf opinion list` '
+                "for valid ids." % value
             )
 
         return f
@@ -132,7 +180,9 @@ tzmap = {"utc": "UTC", "et": "EST", "est": "EST", "pt": "PST", "pst": "PST"}
 
 TIMEZONE = click.Choice(list(tzmap.keys()) + ["unix"], case_sensitive=False)
 FTYPE = FType()
+OTYPE = OType()
 FLAG = Flag()
+OPINION = Opinion()
 TIME = Time()
 NULL_TIME = Time(allow_null=True)
 FREQ = ListOfType("frequency list", int)
@@ -147,6 +197,389 @@ JSON = JsonDictType()
 @click.group()
 def cli():
     """CHIME data flagging tool."""
+
+
+@cli.group("opinion_type")
+def opinion_type():
+    """View and modify data flagging opinion types."""
+    pass
+
+
+@opinion_type.command("list")
+def opinion_type_list():
+    """List known flagging opinion types."""
+    connect_database(read_write=False)
+
+    for type_ in DataFlagOpinionType.select():
+        click.echo(type_.name)
+
+
+@opinion_type.command("create")
+@click.argument("name")
+@click.option(
+    "--description", help="Description of flagging opinion type.", default=None
+)
+@click.option(
+    "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
+)
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
+def create_opinion_type(name, description, metadata, force):
+    """Create a new data flag opinion type with given NAME, and optional description and metadata.
+    """
+    connect_database(read_write=True)
+    type_ = DataFlagOpinionType()
+
+    type_.name = name
+    type_.description = description
+    type_.metadata = metadata
+
+    if force:
+        type_.save()
+    else:
+        click.echo("Type to create:\n")
+        click.echo(format_type(type_))
+        if click.confirm("Create type?"):
+            type_.save()
+            click.echo("Success.")
+        else:
+            click.echo("Aborted.")
+
+
+@opinion_type.command("show")
+@click.argument("opinion_type", type=OTYPE, metavar="TYPE")
+def show_opinion_type(opinion_type):
+    """Show details of the specified opinion TYPE."""
+    click.echo(format_type(opinion_type))
+
+
+@cli.group("opinion")
+def opinion():
+    """Insert data flagging opinions."""
+    pass
+
+
+@opinion.command("create")
+@click.argument("type_", type=OTYPE, metavar="TYPE")
+@click.argument("start", type=TIME)
+@click.argument("finish", type=TIME)
+@click.argument(
+    "decision",
+    type=click.Choice(DataFlagOpinion.choices_decision, case_sensitive=False),
+)
+@click.option("--description", help="Description of flag.", default=None)
+@click.option("--user", "-u", help="Wiki user adding the flag opinion.", required=True)
+@click.option("--password", "-p", help="Wiki user password.", required=True)
+@click.option(
+    "--instrument",
+    type=click.Choice(["chime", "pathfinder"]),
+    help="Name of instrument to apply flag to.",
+    default=None,
+)
+@click.option("--freq", type=FREQ, help="List of frequency IDs to flag.", default=None)
+@click.option("--inputs", type=INPUTS, help="List of input IDs to flag.", default=None)
+@click.option(
+    "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
+)
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
+def create_opinion(
+    type_,
+    start,
+    finish,
+    decision,
+    instrument,
+    description,
+    user,
+    password,
+    freq,
+    inputs,
+    metadata,
+    force,
+):
+    """Create a new data flagging opinion with given TYPE and START and FINISH times.
+
+    Times can be supplied in any format recognized by the `arrow` library. Using
+    the YYYY-MM-DDTHH:MM:SSZ format is recommended. If the flag has not ended,
+    supply the string 'null' or 'none' instead.
+
+    Optionally you can set the instrument, inputs and frequencies effected as
+    well as generic metadata.
+    """
+    connect_database(read_write=False)
+    user_name, user_id = MediaWikiUser.authenticate(user, password)
+
+    # get client
+    client, _ = DataFlagClient.get_or_create(
+        client_name=__name__, client_version=__version__
+    )
+
+    opinion = DataFlagOpinion()
+
+    opinion.type = type_
+    opinion.start_time = start.timestamp
+    opinion.finish_time = finish.timestamp
+    opinion.decision = decision
+    opinion.user = user_id
+    opinion.client = client
+    now = arrow.utcnow().timestamp
+    opinion.creation_time = now
+    opinion.last_edit = now
+
+    if metadata is None:
+        metadata = {}
+
+    # Add any optional metadata
+    if description:
+        metadata["description"] = description
+    if instrument:
+        metadata["instrument"] = instrument
+    if inputs:
+        metadata["inputs"] = inputs
+    if freq:
+        metadata["freq"] = freq
+
+    opinion.metadata = metadata
+
+    if force:
+        opinion.save()
+    else:
+        click.echo("Flagging opinion to create:\n")
+        click.echo(format_opinion(opinion))
+        if click.confirm("Create flagging opinion?"):
+            opinion.save()
+            click.echo("Success.")
+        else:
+            click.echo("Aborted.")
+
+
+@opinion.command("list")
+@click.option(
+    "--type",
+    "type_",
+    type=OTYPE,
+    metavar="TYPE",
+    default=None,
+    help="Type of flagging opinion to list. If not set, list all opinions.",
+)
+@click.option(
+    "--time",
+    type=TIMEZONE,
+    default="utc",
+    help="Timezone/format to display times in. UNIX time gives a UNIX time in seconds.",
+)
+@click.option(
+    "--start",
+    type=TIME,
+    default=None,
+    help="Return only opinions active after this point. Accepts any string that `arrow` "
+    'understands, ISO8601 is recommended, e.g. "2019-10-25T12:34:56Z".',
+)
+@click.option(
+    "--finish",
+    type=TIME,
+    default=None,
+    help="Return only opinions active before this point. Accepts the same format as `--start`",
+)
+def opinion_list(type_, time, start, finish):
+    """List known revisions of TYPE."""
+
+    connect_database(read_write=False)
+
+    query = DataFlagOpinion.select()
+
+    if type_:
+        query = query.where(DataFlagOpinion.type == type_)
+
+    # Add the filters on start/end times
+    if start:
+        query = query.where((DataFlagOpinion.finish_time >= start.timestamp))
+    if finish:
+        query = query.where(DataFlagOpinion.start_time <= finish.timestamp)
+
+    query = query.join(DataFlagOpinionType)
+
+    rows = []
+    for opinion in query:
+        rows.append(
+            (
+                opinion.id,
+                opinion.decision,
+                opinion.type.name,
+                format_time(opinion.start_time),
+                format_time(opinion.finish_time),
+                opinion.user.user_name,
+                format_time(opinion.creation_time),
+            )
+        )
+
+    table = tabulate.tabulate(
+        rows,
+        headers=("id", "decision", "type", "start", "finish", "user", "creation_time"),
+    )
+    click.echo(table)
+
+
+@opinion.command("show")
+@click.argument("opinion", type=OPINION, metavar="ID")
+@click.option("--time", type=TIMEZONE, default="utc")
+def opinion_show(opinion, time):
+    """Show information about the flagging opinion with ID."""
+
+    connect_database(read_write=False)
+
+    click.echo(format_opinion(opinion, time))
+
+
+@opinion.command("edit")
+@click.argument("opinion", type=OPINION, metavar="ID")
+@click.option(
+    "--decision",
+    type=click.Choice(DataFlagOpinion.choices_decision, case_sensitive=False),
+)
+@click.option(
+    "--type",
+    "type_",
+    type=OTYPE,
+    metavar="TYPE",
+    default=None,
+    help="Change the type of the flagging opinion.",
+)
+@click.option(
+    "--start",
+    type=TIME,
+    default=None,
+    help="Change the flag start time in format YYYY-MM-DDTHH:MM:SSZ.",
+)
+@click.option(
+    "--finish",
+    type=TIME,
+    default=None,
+    help="Change the flag end time in format YYYY-MM-DDTHH:MM:SSZ.",
+)
+@click.option(
+    "--instrument",
+    type=click.Choice(["chime", "pathfinder"]),
+    help="Add/change an instrument.",
+    default=None,
+)
+@click.option(
+    "--description", help="Add/change the description of the opinion.", default=None
+)
+@click.option(
+    "--freq",
+    type=FREQ,
+    help="Add/change the list of frequency IDs to flag.",
+    default=None,
+)
+@click.option(
+    "--inputs",
+    type=INPUTS,
+    help="Add/change the list of input IDs to flag.",
+    default=None,
+)
+@click.option(
+    "--metadata", type=JSON, help="Add/change the extra metadata.", default=None
+)
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
+@click.option(
+    "--user", "-u", help="Wiki user editing the flagging opinion.", required=True
+)
+@click.option("--password", "-p", help="Wiki user password.", required=True)
+def opinion_edit(
+    opinion,
+    decision,
+    type_,
+    start,
+    finish,
+    instrument,
+    description,
+    freq,
+    inputs,
+    metadata,
+    force,
+    user,
+    password,
+):
+    """Edit the existing opinion with ID.
+
+    You can change all required and metadata parameters.
+    """
+    connect_database(read_write=True)
+    user_name, user_id = MediaWikiUser.authenticate(user, password)
+
+    opinion_user = (
+        DataFlagOpinion.select(DataFlagOpinion.user_id)
+        .where(DataFlagOpinion.id == opinion)
+        .get()
+    )
+    if user_id != opinion_user.user_id:
+        opinion_user = (
+            MediaWikiUser.select(MediaWikiUser.user_name)
+            .where(MediaWikiUser.user_id == opinion_user.user_id)
+            .get()
+        )
+        raise UserWarning(
+            "Opinion %i can only be edited by it's author (%s)."
+            % (opinion, opinion_user.user_name)
+        )
+
+    if decision:
+        opinion.decision = decision
+
+    if type_:
+        opinion.type = type_
+
+    if start:
+        opinion.start_time = start.timestamp
+
+    if finish:
+        opinion.finish_time = finish.timestamp
+
+    if metadata:
+        opinion.metadata.update(metadata)
+
+    # Edit any optional metadata
+    if description:
+        opinion.metadata["description"] = description
+    if instrument:
+        opinion.metadata["instrument"] = instrument
+    if inputs:
+        opinion.metadata["inputs"] = inputs
+    if freq:
+        opinion.metadata["freq"] = freq
+
+    opinion.last_edit = arrow.utcnow().timestamp
+
+    if force:
+        opinion.save()
+    else:
+        click.echo("Edited opinion:\n")
+        click.echo(format_opinion(opinion))
+        if click.confirm("Commit changed opinion?"):
+            opinion.save()
+            click.echo("Success.")
+        else:
+            click.echo("Aborted.")
+
+
+@opinion.command("vote")
+@click.option(
+    "--verbose", "-v", is_flag=True, default=False, help="Verbosely print results."
+)
+@click.option(
+    "--mode",
+    "-m",
+    required=True,
+    type=click.Choice(VotingJudge.mode_choices, case_sensitive=False),
+    help="Mode to use for translation from opinions to falgs.",
+)
+def opinion_vote(mode, verbose):
+    """Update data flags with vote from opinions."""
+    transalor = VotingJudge(mode)
+    flags = transalor.vote()
+    if verbose is True:
+        click.echo("Vote resulted in %i flags:" % len(flags))
+        for f in flags:
+            format_flag(f)
 
 
 @cli.group("type")
@@ -504,6 +937,39 @@ def format_type(type_):
         "type": type_.name,
         "description": type_.description if type_.description else "",
         "metadata": metadata,
+    }
+
+    return ansimarkup.parse(template.format(**tdict))
+
+
+def format_opinion(opinion, timefmt="utc"):
+    template = """<b>id</b>: {id}
+<b>decision</b>: {decision}
+<b>type</b>: {type}
+<b>start</b>: {start}
+<b>finish</b>: {finish}
+<b>user</b>: {user}
+<b>client</b>: {client_name} ({client_version})
+<b>creation_time</b>: {creation_time}
+<b>last_edit</b>: {last_edit}
+<b>metadata</b>: {metadata}"""
+
+    metadata = (
+        "" if opinion.metadata is None else "\n" + format_metadata(opinion.metadata)
+    )
+
+    tdict = {
+        "id": opinion.id,
+        "start": format_time(opinion.start_time, timefmt),
+        "finish": format_time(opinion.finish_time, timefmt),
+        "metadata": metadata,
+        "type": opinion.type.name,
+        "user": opinion.user.user_name,
+        "client_name": opinion.client.client_name,
+        "client_version": opinion.client.client_version,
+        "decision": opinion.decision,
+        "creation_time": format_time(opinion.creation_time, timefmt),
+        "last_edit": format_time(opinion.last_edit, timefmt),
     }
 
     return ansimarkup.parse(template.format(**tdict))

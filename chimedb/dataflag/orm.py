@@ -201,5 +201,4 @@ class DataFlag(base_model):
             finish_time=finish_time,
             metadata=table_metadata,
         )
-
         return flag

@@ -51,7 +51,7 @@ class Flag(click.ParamType):
 
         try:
             f = orm.DataFlag.get(id=value)
-        except pw.NotFound:
+        except pw.DoesNotExist:
             self.fail(
                 'flag id "%i" unknown. See `cdf flag list` ' "for valid ids." % value
             )

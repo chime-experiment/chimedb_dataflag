@@ -20,7 +20,7 @@ from chimedb.dataflag.opinion import (
     VotingJudge,
 )
 
-from chimedb.core.orm import connect_database
+import chimedb.core as db
 
 
 # Custom parameter types for click arguments
@@ -31,9 +31,6 @@ class OType(click.ParamType):
     name = "opinion type"
 
     def convert(self, value, param, ctx):
-
-        # Connect if needed
-        connect_database(read_write=False)
 
         _typedict = {dt.name: dt for dt in DataFlagOpinionType.select()}
 
@@ -53,9 +50,6 @@ class FType(click.ParamType):
 
     def convert(self, value, param, ctx):
 
-        # Connect if needed
-        connect_database(read_write=False)
-
         _typedict = {dt.name: dt for dt in orm.DataFlagType.select()}
 
         if value not in _typedict:
@@ -73,9 +67,6 @@ class Flag(click.ParamType):
 
     def convert(self, value, param, ctx):
 
-        # Connect if needed
-        connect_database(read_write=False)
-
         try:
             f = orm.DataFlag.get(id=value)
         except pw.DoesNotExist:
@@ -92,9 +83,6 @@ class Opinion(click.ParamType):
     name = "opinion"
 
     def convert(self, value, param, ctx):
-
-        # Connect if needed
-        connect_database(read_write=False)
 
         try:
             f = DataFlagOpinion.get(id=value)
@@ -194,6 +182,7 @@ JSON = JsonDictType()
 # =========================
 
 
+@db.atomic(read_write=True)
 @click.group()
 def cli():
     """CHIME data flagging tool."""
@@ -208,8 +197,6 @@ def opinion_type():
 @opinion_type.command("list")
 def opinion_type_list():
     """List known flagging opinion types."""
-    connect_database(read_write=False)
-
     for type_ in DataFlagOpinionType.select():
         click.echo(type_.name)
 
@@ -226,7 +213,6 @@ def opinion_type_list():
 def create_opinion_type(name, description, metadata, force):
     """Create a new data flag opinion type with given NAME, and optional description and metadata.
     """
-    connect_database(read_write=True)
     type_ = DataFlagOpinionType()
 
     type_.name = name
@@ -304,7 +290,6 @@ def create_opinion(
     Optionally you can set the instrument, inputs and frequencies effected as
     well as generic metadata.
     """
-    connect_database(read_write=False)
     user_name, user_id = MediaWikiUser.authenticate(user, password)
 
     # get client
@@ -382,8 +367,6 @@ def create_opinion(
 def opinion_list(type_, time, start, finish):
     """List known revisions of TYPE."""
 
-    connect_database(read_write=False)
-
     query = DataFlagOpinion.select()
 
     if type_:
@@ -423,8 +406,6 @@ def opinion_list(type_, time, start, finish):
 @click.option("--time", type=TIMEZONE, default="utc")
 def opinion_show(opinion, time):
     """Show information about the flagging opinion with ID."""
-
-    connect_database(read_write=False)
 
     click.echo(format_opinion(opinion, time))
 
@@ -503,7 +484,6 @@ def opinion_edit(
 
     You can change all required and metadata parameters.
     """
-    connect_database(read_write=True)
     user_name, user_id = MediaWikiUser.authenticate(user, password)
 
     opinion_user = (
@@ -597,8 +577,6 @@ def flag():
 @type_.command("list")
 def type_list():
     """List known flag types."""
-    connect_database(read_write=False)
-
     for type_ in orm.DataFlagType.select():
         click.echo(type_.name)
 
@@ -613,8 +591,6 @@ def type_list():
 def create_type(name, description, metadata, force):
     """Create a new data flag type with given NAME, and optional description and metadata.
     """
-    connect_database(read_write=True)
-
     type_ = orm.DataFlagType()
 
     type_.name = name
@@ -670,8 +646,6 @@ def show_type(type_):
 def flag_list(type_, time, start, finish):
     """List known revisions of TYPE."""
 
-    connect_database(read_write=False)
-
     query = orm.DataFlag.select()
 
     if type_:
@@ -708,8 +682,6 @@ def flag_list(type_, time, start, finish):
 @click.option("--time", type=TIMEZONE, default="utc")
 def flag_show(flag, time):
     """Show information about the flag with ID."""
-
-    connect_database(read_write=False)
 
     click.echo(format_flag(flag, time))
 
@@ -748,8 +720,6 @@ def create_flag(
     Optionally you can set the instrument, inputs and frequencies effected as
     well as generic metadata.
     """
-    connect_database(read_write=True)
-
     flag = orm.DataFlag()
 
     flag.type = type_
@@ -853,8 +823,6 @@ def edit_flag(
 
     You can change all required and metadata parameters.
     """
-    connect_database(read_write=True)
-
     if type_:
         flag.type = type_
 

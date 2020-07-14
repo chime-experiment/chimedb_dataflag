@@ -10,7 +10,7 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 
 from .. import DataFlag, DataFlagType
 
-from chimedb.core.orm import base_model, JSONDictField
+from chimedb.core.orm import base_model, JSONDictField, EnumField
 from chimedb.core.exceptions import ValidationError
 from chimedb.core import MediaWikiUser
 
@@ -90,8 +90,8 @@ class DataFlagOpinion(DataFlag):
 
     type = pw.ForeignKeyField(DataFlagOpinionType, backref="opinions")
     user = pw.ForeignKeyField(MediaWikiUser, backref="opinions")
-    choices_decision = ["good", "bad", "unsure"]
-    decision = pw.CharField(max_length=max([len(c) for c in choices_decision]))
+    decision = EnumField(["good", "bad", "unsure"])
+
     creation_time = pw.DoubleField()
     last_edit = pw.DoubleField()
     client = pw.ForeignKeyField(DataFlagClient)
@@ -141,10 +141,10 @@ class DataFlagOpinion(DataFlag):
             The opinion instance.
         """
 
-        if not isinstance(decision, str) or decision not in cls.choices_decision:
+        if not isinstance(decision, str) or decision not in cls.decision.enum_list:
             raise ValidationError(
                 "Invalid value '%s' for 'decision'. Choose one of %s"
-                % (decision, cls.choices_decision)
+                % (decision, cls.decision.enum_list)
             )
 
         table_metadata = {}

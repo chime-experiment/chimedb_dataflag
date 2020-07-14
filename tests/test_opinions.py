@@ -6,6 +6,7 @@ import pytest
 import time
 
 import chimedb.core as db
+from chimedb.mediawiki import MediaWikiUser
 
 from chimedb.dataflag.client import (
     opinion_type_list,
@@ -17,18 +18,18 @@ from chimedb.dataflag.client import (
     opinion_show,
     opinion_edit,
     opinion_vote,
+    create_revision,
+    revision_list,
+    show_revision,
 )
-from chimedb.dataflag.opinion import (
+from chimedb.dataflag import (
     DataFlagOpinionType,
     DataFlagOpinion,
-    MediaWikiUser,
+    DataRevision,
 )
 
 
 user = "Test"
-user_id = 0
-fail_user = "fail"
-password = "******"
 
 
 @pytest.fixture
@@ -60,26 +61,9 @@ def db_conn():
     db.connect()
     db.orm.create_tables(["chimedb.dataflag.opinion"])
 
-    # insert a user
+    # insert a user with password ******
     pwd = ":B:0000ffff:e989651ffffcb5bf9b9abedfdab58460"
-    MediaWikiUser.get_or_create(user_id=user_id, user_name=user, user_password=pwd)
-
-    # insert a user with a password hash we don't understand
-    pwd = "1 2 3 4"
-    MediaWikiUser.get_or_create(user_id=1, user_name=fail_user, user_password=pwd)
-
-
-def test_user_authentication(db_conn):
-    with pytest.raises(db.exceptions.ValidationError):
-        MediaWikiUser.authenticate(fail_user, password)
-
-    with pytest.raises(UserWarning):
-        MediaWikiUser.authenticate("unknown_user", password)
-
-    with pytest.raises(UserWarning):
-        MediaWikiUser.authenticate(user, "wrong_password")
-
-    assert MediaWikiUser.authenticate(user, password) is not None
+    MediaWikiUser.get_or_create(user_name=user, user_password=pwd)
 
 
 @pytest.fixture
@@ -151,14 +135,12 @@ def test_click(test_create_opinions):
     finish = str(utc.format())
 
     result = runner.invoke(
-        create_opinion,
-        ["test", start, finish, "idontknow", "-u", user, "-p", password, "--force"],
+        create_opinion, ["test", start, finish, "idontknow", "-u", user, "--force"],
     )
     assert "Invalid value" in result.output
 
     result = runner.invoke(
-        create_opinion,
-        ["test", start, finish, "good", "-u", user, "-p", password, "--force"],
+        create_opinion, ["test", start, finish, "good", "-u", user, "--force"],
     )
     assert result.exit_code == 0
 
@@ -188,20 +170,24 @@ def test_click(test_create_opinions):
     assert times[0] == times[1]
 
     time.sleep(1)
+    new_user = "iknowbetter"
     result = runner.invoke(
         opinion_edit,
         [
             str(test_create_opinions.id),
             "--decision",
             "good",
-            "-u",
-            user,
-            "-p",
-            password,
+            "--user",
+            new_user,
             "--force",
         ],
     )
-    assert result.exit_code == 0
+    assert result.exit_code != 0, result.output
+
+    result = runner.invoke(
+        opinion_edit, [str(test_create_opinions.id), "--decision", "good", "--force",],
+    )
+    assert result.exit_code == 0, result.output
 
     time.sleep(1)
     result = runner.invoke(opinion_show, [str(test_create_opinions.id)])

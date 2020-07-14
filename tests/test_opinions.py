@@ -121,11 +121,11 @@ def test_click(test_create_opinions):
     runner.invoke(create_opinion_type, ["test2", "--description", "bla", "--force"])
 
     result = runner.invoke(opinion_type_list)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert result.output == "test\ntest2\n"
 
     result = runner.invoke(show_opinion_type, ["test"])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "type: test" in result.output
     assert "version: 0" in result.output
 
@@ -142,7 +142,7 @@ def test_click(test_create_opinions):
     result = runner.invoke(
         create_opinion, ["test", start, finish, "good", "-u", user, "--force"],
     )
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
     result = runner.invoke(opinion_list)
     assert "test" in result.output
@@ -163,7 +163,7 @@ def test_click(test_create_opinions):
         return times
 
     result = runner.invoke(opinion_show, [str(test_create_opinions.id)])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "user: %s" % user in result.output
     assert "decision: bad" in result.output
     times = parse_opinion(result.output)
@@ -191,7 +191,7 @@ def test_click(test_create_opinions):
 
     time.sleep(1)
     result = runner.invoke(opinion_show, [str(test_create_opinions.id)])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "user: %s" % user in result.output
     assert "decision: good" in result.output
     times = parse_opinion(result.output)
@@ -199,8 +199,8 @@ def test_click(test_create_opinions):
 
     # create new flagging type: vote
     result = runner.invoke(create_type, ["vote", "-f"])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
     # vote
     result = runner.invoke(opinion_vote, ["-v", "-m", "hypnotoad"])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output

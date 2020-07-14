@@ -250,7 +250,7 @@ def opinion():
 @click.argument("finish", type=TIME)
 @click.argument(
     "decision",
-    type=click.Choice(DataFlagOpinion.choices_decision, case_sensitive=False),
+    type=click.Choice(DataFlagOpinion.decision.enum_list, case_sensitive=False),
 )
 @click.option("--description", help="Description of flag.", default=None)
 @click.option(
@@ -424,7 +424,7 @@ def opinion_show(opinion, time):
 @click.argument("opinion", type=OPINION, metavar="ID")
 @click.option(
     "--decision",
-    type=click.Choice(DataFlagOpinion.choices_decision, case_sensitive=False),
+    type=click.Choice(DataFlagOpinion.decision.enum_list, case_sensitive=False),
 )
 @click.option(
     "--type",

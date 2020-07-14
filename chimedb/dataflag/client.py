@@ -16,10 +16,10 @@ from chimedb.dataflag.opinion import (
     DataFlagOpinion,
     DataFlagOpinionType,
     DataFlagClient,
-    MediaWikiUser,
     VotingJudge,
 )
 
+from chimedb import mediawiki
 import chimedb.core as db
 
 
@@ -253,8 +253,12 @@ def opinion():
     type=click.Choice(DataFlagOpinion.choices_decision, case_sensitive=False),
 )
 @click.option("--description", help="Description of flag.", default=None)
-@click.option("--user", "-u", help="Wiki user adding the flag opinion.", required=True)
-@click.option("--password", "-p", help="Wiki user password.", required=True)
+@click.option(
+    "--user",
+    "-u",
+    help="Wiki user adding the flag opinion. If no user is supplied, the name of the local user is used.",
+    default=None,
+)
 @click.option(
     "--instrument",
     type=click.Choice(["chime", "pathfinder"]),
@@ -275,7 +279,6 @@ def create_opinion(
     instrument,
     description,
     user,
-    password,
     freq,
     inputs,
     metadata,
@@ -290,7 +293,14 @@ def create_opinion(
     Optionally you can set the instrument, inputs and frequencies effected as
     well as generic metadata.
     """
-    user_name, user_id = MediaWikiUser.authenticate(user, password)
+    try:
+        wikiuser = mediawiki.MediaWikiUser.get(user_name=user if user else get_user())
+    except pw.DoesNotExist:
+        raise click.BadParameter(
+            "Unknown user '%s'. Supply a valid MediaWiki username with -u <user>."
+            % user,
+            param_hint="user",
+        )
 
     # get client
     client, _ = DataFlagClient.get_or_create(
@@ -303,7 +313,7 @@ def create_opinion(
     opinion.start_time = start.timestamp
     opinion.finish_time = finish.timestamp
     opinion.decision = decision
-    opinion.user = user_id
+    opinion.user = wikiuser
     opinion.client = client
     now = arrow.utcnow().timestamp
     opinion.creation_time = now
@@ -425,6 +435,9 @@ def opinion_show(opinion, time):
     help="Change the type of the flagging opinion.",
 )
 @click.option(
+    "--user", help="Change the wiki user who created the flag opinion.", default=None
+)
+@click.option(
     "--start",
     type=TIME,
     default=None,
@@ -461,10 +474,6 @@ def opinion_show(opinion, time):
     "--metadata", type=JSON, help="Add/change the extra metadata.", default=None
 )
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
-@click.option(
-    "--user", "-u", help="Wiki user editing the flagging opinion.", required=True
-)
-@click.option("--password", "-p", help="Wiki user password.", required=True)
 def opinion_edit(
     opinion,
     decision,
@@ -478,29 +487,23 @@ def opinion_edit(
     metadata,
     force,
     user,
-    password,
 ):
     """Edit the existing opinion with ID.
 
     You can change all required and metadata parameters.
     """
-    user_name, user_id = MediaWikiUser.authenticate(user, password)
-
-    opinion_user = (
-        DataFlagOpinion.select(DataFlagOpinion.user_id)
-        .where(DataFlagOpinion.id == opinion)
-        .get()
-    )
-    if user_id != opinion_user.user_id:
-        opinion_user = (
-            MediaWikiUser.select(MediaWikiUser.user_name)
-            .where(MediaWikiUser.user_id == opinion_user.user_id)
-            .get()
-        )
-        raise UserWarning(
-            "Opinion %i can only be edited by it's author (%s)."
-            % (opinion, opinion_user.user_name)
-        )
+    if user:
+        try:
+            wikiuser = mediawiki.MediaWikiUser.get(
+                user_name=user if user else get_user()
+            )
+        except pw.DoesNotExist:
+            raise click.BadParameter(
+                "Unknown user '%s'. Supply a valid MediaWiki username with -u <user>."
+                % user,
+                param_hint="user",
+            )
+        opinion.user = wikiuser
 
     if decision:
         opinion.decision = decision

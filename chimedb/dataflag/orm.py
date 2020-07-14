@@ -9,6 +9,7 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 # === End Python 2/3 compatibility
 
 from chimedb.core.orm import base_model, JSONDictField
+from chimedb.mediawiki import MediaWikiUser
 
 import numpy as np
 import peewee as pw

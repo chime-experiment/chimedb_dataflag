@@ -557,8 +557,8 @@ def opinion_edit(
 )
 def opinion_vote(mode, verbose):
     """Update data flags with vote from opinions."""
-    transalor = VotingJudge(mode)
-    flags = transalor.vote()
+    judge = VotingJudge(mode)
+    flags = judge.vote()
     if verbose is True:
         click.echo("Vote resulted in %i flags:" % len(flags))
         for f in flags:

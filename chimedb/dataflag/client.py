@@ -656,7 +656,8 @@ def show_type(type_):
     "--start",
     type=TIME,
     default=None,
-    help='Return only flags active after this point. Accepts any string that `arrow` understands, ISO8601 is recommended, e.g. "2019-10-25T12:34:56Z".',
+    help="Return only flags active after this point. Accepts any string that `arrow` understands, "
+    'ISO8601 is recommended, e.g. "2019-10-25T12:34:56Z".',
 )
 @click.option(
     "--finish",

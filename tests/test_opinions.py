@@ -73,6 +73,9 @@ def test_create_opinions(db_conn):
         name="test", description="blubb", metadata={"version": 0}
     )
 
+    # Create revision
+    revision, _ = DataRevision.get_or_create(name="test", description="foo")
+
     metadata = {}
     metadata["description"] = "I'm not sure, but"
     metadata["instrument"] = "chime"
@@ -88,6 +91,7 @@ def test_create_opinions(db_conn):
             time.time(),
             time.time(),
             metadata=metadata,
+            revision=revision.name,
         )
 
     with pytest.raises(db.exceptions.ValidationError):
@@ -101,6 +105,7 @@ def test_create_opinions(db_conn):
             time.time(),
             time.time(),
             metadata=metadata,
+            revision=revision.name,
         )
 
     return DataFlagOpinion.create_opinion(
@@ -113,6 +118,7 @@ def test_create_opinions(db_conn):
         time.time(),
         time.time(),
         metadata=metadata,
+        revision=revision.name,
     )
 
 
@@ -129,18 +135,37 @@ def test_click(test_create_opinions):
     assert "type: test" in result.output
     assert "version: 0" in result.output
 
+    result = runner.invoke(create_revision, ["testtest", "--force"],)
+    assert result.exit_code == 0, result.output
+
+    result = runner.invoke(
+        create_revision,
+        ["testtesttest", "--description", "Revision created for testing.", "--force"],
+    )
+    assert result.exit_code == 0, result.output
+
+    result = runner.invoke(revision_list)
+    assert result.exit_code == 0, result.output
+    assert "testtesttest" in result.output
+
+    result = runner.invoke(show_revision, "testtesttest")
+    assert result.exit_code == 0, result.output
+    assert "created for testing" in result.output
+
     utc = arrow.utcnow()
     start = str(utc.format())
     utc = utc.shift(hours=-1)
     finish = str(utc.format())
 
     result = runner.invoke(
-        create_opinion, ["test", start, finish, "idontknow", "-u", user, "--force"],
+        create_opinion,
+        ["test", start, finish, "idontknow", "-u", user, "-r", "test", "--force"],
     )
     assert "Invalid value" in result.output
 
     result = runner.invoke(
-        create_opinion, ["test", start, finish, "good", "-u", user, "--force"],
+        create_opinion,
+        ["test", start, finish, "good", "-u", user, "-r" "test", "--force"],
     )
     assert result.exit_code == 0, result.output
 
@@ -202,5 +227,5 @@ def test_click(test_create_opinions):
     assert result.exit_code == 0, result.output
 
     # vote
-    result = runner.invoke(opinion_vote, ["-v", "-m", "hypnotoad"])
+    result = runner.invoke(opinion_vote, ["-v", "-m", "hypnotoad", "-r", "test"])
     assert result.exit_code == 0, result.output

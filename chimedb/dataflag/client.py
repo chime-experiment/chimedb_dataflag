@@ -12,12 +12,7 @@ import peewee as pw
 import ansimarkup
 
 from chimedb.dataflag import orm, __version__
-from chimedb.dataflag.opinion import (
-    DataFlagOpinion,
-    DataFlagOpinionType,
-    DataFlagClient,
-    VotingJudge,
-)
+from chimedb.dataflag.vote import VotingJudge
 
 from chimedb import mediawiki
 import chimedb.core as db
@@ -32,7 +27,7 @@ class OType(click.ParamType):
 
     def convert(self, value, param, ctx):
 
-        _typedict = {dt.name: dt for dt in DataFlagOpinionType.select()}
+        _typedict = {dt.name: dt for dt in orm.DataFlagOpinionType.select()}
 
         if value not in _typedict:
             self.fail(
@@ -85,11 +80,29 @@ class Opinion(click.ParamType):
     def convert(self, value, param, ctx):
 
         try:
-            f = DataFlagOpinion.get(id=value)
+            f = orm.DataFlagOpinion.get(id=value)
         except pw.DoesNotExist:
             self.fail(
                 'opinion id "%s" unknown. See `cdf opinion list` '
                 "for valid ids." % value
+            )
+
+        return f
+
+
+class Revision(click.ParamType):
+    """Revision parameter for click."""
+
+    name = "revision"
+
+    def convert(self, value, param, ctx):
+
+        try:
+            f = orm.DataRevision.get(name=value)
+        except pw.DoesNotExist:
+            self.fail(
+                'revision with name "%s" unknown. See `cdf revision list` '
+                "for valid revisions." % value
             )
 
         return f
@@ -172,6 +185,7 @@ OTYPE = OType()
 FLAG = Flag()
 OPINION = Opinion()
 TIME = Time()
+REVISION = Revision()
 NULL_TIME = Time(allow_null=True)
 FREQ = ListOfType("frequency list", int)
 INPUTS = ListOfType("input list", int)
@@ -197,7 +211,7 @@ def opinion_type():
 @opinion_type.command("list")
 def opinion_type_list():
     """List known flagging opinion types."""
-    for type_ in DataFlagOpinionType.select():
+    for type_ in orm.DataFlagOpinionType.select():
         click.echo(type_.name)
 
 
@@ -213,7 +227,7 @@ def opinion_type_list():
 def create_opinion_type(name, description, metadata, force):
     """Create a new data flag opinion type with given NAME, and optional description and metadata.
     """
-    type_ = DataFlagOpinionType()
+    type_ = orm.DataFlagOpinionType()
 
     type_.name = name
     type_.description = description
@@ -250,7 +264,7 @@ def opinion():
 @click.argument("finish", type=TIME)
 @click.argument(
     "decision",
-    type=click.Choice(DataFlagOpinion.decision.enum_list, case_sensitive=False),
+    type=click.Choice(orm.DataFlagOpinion.decision.enum_list, case_sensitive=False),
 )
 @click.option("--description", help="Description of flag.", default=None)
 @click.option(
@@ -270,6 +284,7 @@ def opinion():
 @click.option(
     "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
 )
+@click.option("--revision", "-r", type=REVISION, required=True)
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_opinion(
     type_,
@@ -282,6 +297,7 @@ def create_opinion(
     freq,
     inputs,
     metadata,
+    revision,
     force,
 ):
     """Create a new data flagging opinion with given TYPE and START and FINISH times.
@@ -303,11 +319,11 @@ def create_opinion(
         )
 
     # get client
-    client, _ = DataFlagClient.get_or_create(
+    client, _ = orm.DataFlagClient.get_or_create(
         client_name=__name__, client_version=__version__
     )
 
-    opinion = DataFlagOpinion()
+    opinion = orm.DataFlagOpinion()
 
     opinion.type = type_
     opinion.start_time = start.timestamp
@@ -318,6 +334,7 @@ def create_opinion(
     now = arrow.utcnow().timestamp
     opinion.creation_time = now
     opinion.last_edit = now
+    opinion.revision = revision
 
     if metadata is None:
         metadata = {}
@@ -377,18 +394,18 @@ def create_opinion(
 def opinion_list(type_, time, start, finish):
     """List known revisions of TYPE."""
 
-    query = DataFlagOpinion.select()
+    query = orm.DataFlagOpinion.select()
 
     if type_:
-        query = query.where(DataFlagOpinion.type == type_)
+        query = query.where(orm.DataFlagOpinion.type == type_)
 
     # Add the filters on start/end times
     if start:
-        query = query.where((DataFlagOpinion.finish_time >= start.timestamp))
+        query = query.where((orm.DataFlagOpinion.finish_time >= start.timestamp))
     if finish:
-        query = query.where(DataFlagOpinion.start_time <= finish.timestamp)
+        query = query.where(orm.DataFlagOpinion.start_time <= finish.timestamp)
 
-    query = query.join(DataFlagOpinionType)
+    query = query.join(orm.DataFlagOpinionType)
 
     rows = []
     for opinion in query:
@@ -424,7 +441,7 @@ def opinion_show(opinion, time):
 @click.argument("opinion", type=OPINION, metavar="ID")
 @click.option(
     "--decision",
-    type=click.Choice(DataFlagOpinion.decision.enum_list, case_sensitive=False),
+    type=click.Choice(orm.DataFlagOpinion.decision.enum_list, case_sensitive=False),
 )
 @click.option(
     "--type",
@@ -555,9 +572,10 @@ def opinion_edit(
     type=click.Choice(VotingJudge.mode_choices, case_sensitive=False),
     help="Mode to use for translation from opinions to falgs.",
 )
-def opinion_vote(mode, verbose):
+@click.option("--revision", "-r", type=REVISION, required=True)
+def opinion_vote(mode, verbose, revision):
     """Update data flags with vote from opinions."""
-    judge = VotingJudge(mode)
+    judge = VotingJudge(mode, revision)
     flags = judge.vote()
     if verbose is True:
         click.echo("Vote resulted in %i flags:" % len(flags))
@@ -862,6 +880,50 @@ def edit_flag(
             click.echo("Aborted.")
 
 
+@cli.group("revision")
+def revision():
+    """Insert, view and modify data revisions."""
+    pass
+
+
+@revision.command("list")
+def revision_list():
+    """List known data revisions."""
+    for rev in orm.DataRevision.select():
+        click.echo(rev.name)
+
+
+@revision.command("create")
+@click.argument("name")
+@click.option("--description", help="Description of data revision.", default=None)
+@click.option("--force", "-f", is_flag=True, help="Create without prompting.")
+def create_revision(name, description, force):
+    """Create a new data revision with given NAME, and optional description.
+    """
+    revision = orm.DataRevision()
+
+    revision.name = name
+    revision.description = description
+
+    if force:
+        revision.save()
+    else:
+        click.echo("Revision to create:\n")
+        click.echo(format_revision(revision))
+        if click.confirm("Create revision?"):
+            revision.save()
+            click.echo("Success.")
+        else:
+            click.echo("Aborted.")
+
+
+@revision.command("show")
+@click.argument("revision", type=REVISION, metavar="REVISION")
+def show_revision(revision):
+    """Show details of the specified REVISION."""
+    click.echo(format_revision(revision))
+
+
 def format_time(time, timefmt="utc"):
     if time is None:
         return "null"
@@ -941,6 +1003,18 @@ def format_opinion(opinion, timefmt="utc"):
         "decision": opinion.decision,
         "creation_time": format_time(opinion.creation_time, timefmt),
         "last_edit": format_time(opinion.last_edit, timefmt),
+    }
+
+    return ansimarkup.parse(template.format(**tdict))
+
+
+def format_revision(revision):
+    template = """<b>name</b>: {name}
+<b>descriptions</b>: {description}"""
+
+    tdict = {
+        "name": revision.name,
+        "description": revision.description,
     }
 
     return ansimarkup.parse(template.format(**tdict))

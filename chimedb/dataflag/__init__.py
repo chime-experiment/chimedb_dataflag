@@ -5,10 +5,20 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 
 # === End Python 2/3 compatibility
 
-
-from .orm import DataFlagType, DataFlag
+from .orm import (
+    DataFlagClient,
+    DataFlagOpinionType,
+    DataFlagOpinion,
+    DataFlagVote,
+    DataFlagVoteOpinion,
+    DataRevision,
+    DataFlagType,
+    DataFlag,
+)
 
 from ._version import get_versions
 
 __version__ = get_versions()["version"]
 del get_versions
+
+from .vote import VotingJudge

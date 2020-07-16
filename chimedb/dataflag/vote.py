@@ -1,3 +1,12 @@
+"""
+CHIME Dataflag Voting module.
+
+After user opinions are inserted, a vote can be made to translate opinions to data flags.
+
+To add voting modes, create a vote method in the class `VotingJudge` and name it in
+`VotingJudge._modes`.
+"""
+
 import arrow
 import peewee as pw
 
@@ -7,11 +16,26 @@ from .orm import (
     DataFlag,
     DataFlagClient,
     DataFlagVoteOpinion,
+    DataRevision,
 )
-from .. import __version__
+from . import __version__
 
 
 class VotingJudge:
+    """
+    Translate opinions to data flags.
+
+    Parameters
+    ----------
+    mode : str
+        Name of the voting mode to use.
+
+    Attributes
+    ----------
+    mode_choices : List(str)
+        Names of available voting modes.
+    """
+
     # the max time we think a vote could take
     max_vote_time = 60
 
@@ -32,7 +56,8 @@ class VotingJudge:
 
         # Get all opinions entered since then
         new_opinions = DataFlagOpinion.select().where(
-            DataFlagOpinion.last_edit >= last_vote_time
+            (DataFlagOpinion.last_edit >= last_vote_time)
+            & (DataFlagOpinion.revision == self.revision)
         )
 
         flags = []
@@ -69,7 +94,11 @@ class VotingJudge:
             client_name=__name__, client_version=__version__
         )
         vote = DataFlagVote.create(
-            time=timestamp, mode=self.mode, client=client, resulting_flag=flag
+            time=timestamp,
+            mode=self.mode,
+            client=client,
+            resulting_flag=flag,
+            revision=self.revision,
         )
         DataFlagVoteOpinion.create(vote=vote, opinion=opinion)
         return flag
@@ -79,7 +108,7 @@ class VotingJudge:
     _modes = {"hypnotoad": hypnotoad_vote}
     mode_choices = list(_modes.keys())
 
-    def __init__(self, mode):
+    def __init__(self, mode, revision):
         if len(mode) > DataFlagVote.max_len_mode_name:
             raise RuntimeError(
                 "Mode can't be longer than %i characters (len(%s) is %i)."
@@ -97,3 +126,12 @@ class VotingJudge:
             raise ValueError("Invalid mode: %s" % mode)
 
         self.mode = mode
+        if isinstance(revision, str):
+            self.revision = DataRevision.get(name=revision)
+        elif isinstance(revision, DataRevision):
+            self.revision = revision
+        else:
+            raise TypeError(
+                "Expected type str or DataRevision for argument revision (got %s)."
+                % type(revision)
+            )

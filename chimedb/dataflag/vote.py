@@ -97,7 +97,7 @@ class VotingJudge:
             time=timestamp,
             mode=self.mode,
             client=client,
-            resulting_flag=flag,
+            flag=flag,
             revision=self.revision,
         )
         DataFlagVoteOpinion.create(vote=vote, opinion=opinion)

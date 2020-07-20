@@ -53,28 +53,6 @@ class DataFlagClient(base_model):
     client_version = pw.CharField()
 
 
-class DataFlagVote(base_model):
-    """
-    A Vote that resulted in the translation of opinions to flags.
-
-    Attributes
-    ----------
-    time : float
-        Unix time at vote creation.
-    mode : str
-        Voting mode name. They are implemented in `chimed.dataflag.opinion.vote`.
-    client : DataFlagClient
-        Client used to vote.
-    """
-
-    max_len_mode_name = 32
-
-    time = pw.FloatField()
-    mode = pw.CharField(max_length=max_len_mode_name)
-    client = pw.ForeignKeyField(DataFlagClient)
-    revision = pw.ForeignKeyField(DataRevision, backref="votes")
-
-
 class DataFlagType(DataSubsetType):
     """The type of flag that we are using.
 
@@ -124,7 +102,6 @@ class DataFlag(DataSubset):
     """
 
     type = pw.ForeignKeyField(DataFlagType, backref="flags")
-    vote = pw.ForeignKeyField(DataFlagVote, backref="flags", null=True)
 
     @classmethod
     def create_flag(
@@ -194,6 +171,29 @@ class DataFlag(DataSubset):
 
 # Tables pertaining to the data flag opinions.
 # ============================================
+
+
+class DataFlagVote(base_model):
+    """
+    A Vote that resulted in the translation of opinions to flags.
+
+    Attributes
+    ----------
+    time : float
+        Unix time at vote creation.
+    mode : str
+        Voting mode name. They are implemented in `chimed.dataflag.opinion.vote`.
+    client : DataFlagClient
+        Client used to vote.
+    """
+
+    max_len_mode_name = 32
+
+    time = pw.FloatField()
+    mode = pw.CharField(max_length=max_len_mode_name)
+    client = pw.ForeignKeyField(DataFlagClient)
+    revision = pw.ForeignKeyField(DataRevision, backref="votes")
+    flag = pw.ForeignKeyField(DataFlag, backref="vote")
 
 
 class DataFlagOpinionType(DataSubsetType):

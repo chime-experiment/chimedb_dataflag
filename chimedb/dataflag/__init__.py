@@ -17,8 +17,8 @@ Opinion Database Model Classes
     opinions on flagging subsets of data. User opinions can later get translated to flags.
 
 * DataFlagVote
-    A vote is the action that translates existing user opinions to data flags. The voting mode name
-    is stored here. Voting modes are implemented in `VotingJudge`.
+    A vote is the action that translates a set of existing user opinions to one data flag.
+    The voting mode name is stored here. Voting modes are implemented in `VotingJudge`.
 
 * DataFlagVoteOpinion
     Many-to-many relationship between votes and opinions.

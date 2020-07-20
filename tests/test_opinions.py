@@ -6,7 +6,6 @@ import pytest
 import time
 
 import chimedb.core as db
-from chimedb.mediawiki import MediaWikiUser
 
 from chimedb.dataflag.client import (
     opinion_type_list,
@@ -63,7 +62,7 @@ def db_conn():
 
     # insert a user with password ******
     pwd = ":B:0000ffff:e989651ffffcb5bf9b9abedfdab58460"
-    MediaWikiUser.get_or_create(user_name=user, user_password=pwd)
+    db.mediawiki.MediaWikiUser.get_or_create(user_name=user, user_password=pwd)
 
 
 @pytest.fixture

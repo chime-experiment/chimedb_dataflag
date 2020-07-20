@@ -14,7 +14,6 @@ import ansimarkup
 from chimedb.dataflag import orm, __version__
 from chimedb.dataflag.vote import VotingJudge
 
-from chimedb import mediawiki
 import chimedb.core as db
 
 
@@ -310,7 +309,9 @@ def create_opinion(
     well as generic metadata.
     """
     try:
-        wikiuser = mediawiki.MediaWikiUser.get(user_name=user if user else get_user())
+        wikiuser = db.mediawiki.MediaWikiUser.get(
+            user_name=user if user else get_user()
+        )
     except pw.DoesNotExist:
         raise click.BadParameter(
             "Unknown user '%s'. Supply a valid MediaWiki username with -u <user>."
@@ -511,7 +512,7 @@ def opinion_edit(
     """
     if user:
         try:
-            wikiuser = mediawiki.MediaWikiUser.get(
+            wikiuser = db.mediawiki.MediaWikiUser.get(
                 user_name=user if user else get_user()
             )
         except pw.DoesNotExist:

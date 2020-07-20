@@ -12,7 +12,7 @@ from .base_models import DataSubset, DataSubsetType
 
 from chimedb.core.orm import base_model, JSONDictField, EnumField
 from chimedb.core.exceptions import ValidationError
-from chimedb.mediawiki import MediaWikiUser
+from chimedb.core.mediawiki import MediaWikiUser
 
 import peewee as pw
 

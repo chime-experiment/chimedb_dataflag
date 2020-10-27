@@ -261,6 +261,12 @@ class DataFlagOpinion(DataSubset):
     client = pw.ForeignKeyField(DataFlagClient)
     revision = pw.ForeignKeyField(DataRevision, backref="opinions")
 
+    class Meta:
+        indexes = (
+            # create a unique index
+            (("type", "user", "start_time", "finish_time", "revision"), True),
+        )
+
     @classmethod
     def create_opinion(
         cls,

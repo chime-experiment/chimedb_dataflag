@@ -45,8 +45,7 @@ class DataSubset(base_model):
 
     @property
     def freq(self):
-        """The list of inputs the flag applies to. `None` if not set.
-        """
+        """The list of inputs the flag applies to. `None` if not set."""
         if self.metadata is not None:
             return self.metadata.get("freq", None)
         else:
@@ -54,8 +53,7 @@ class DataSubset(base_model):
 
     @property
     def freq_mask(self):
-        """An array for the frequencies flagged (`True` if the flag applies).
-        """
+        """An array for the frequencies flagged (`True` if the flag applies)."""
 
         # TODO: hard coded for CHIME
         mask = np.ones(1024, dtype=np.bool)
@@ -68,8 +66,7 @@ class DataSubset(base_model):
 
     @property
     def inputs(self):
-        """The list of inputs the flag applies to. `None` if not set.
-        """
+        """The list of inputs the flag applies to. `None` if not set."""
         if self.metadata is not None:
             return self.metadata.get("inputs", None)
         else:
@@ -77,8 +74,7 @@ class DataSubset(base_model):
 
     @property
     def input_mask(self):
-        """An array for the inputs flagged (`True` if the flag applies).
-        """
+        """An array for the inputs flagged (`True` if the flag applies)."""
         if self.instrument is None:
             return None
 

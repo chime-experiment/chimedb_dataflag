@@ -134,7 +134,10 @@ def test_click(test_create_opinions):
     assert "type: test" in result.output
     assert "version: 0" in result.output
 
-    result = runner.invoke(create_revision, ["testtest", "--force"],)
+    result = runner.invoke(
+        create_revision,
+        ["testtest", "--force"],
+    )
     assert result.exit_code == 0, result.output
 
     result = runner.invoke(
@@ -209,7 +212,13 @@ def test_click(test_create_opinions):
     assert result.exit_code != 0, result.output
 
     result = runner.invoke(
-        opinion_edit, [str(test_create_opinions.id), "--decision", "good", "--force",],
+        opinion_edit,
+        [
+            str(test_create_opinions.id),
+            "--decision",
+            "good",
+            "--force",
+        ],
     )
     assert result.exit_code == 0, result.output
 

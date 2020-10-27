@@ -224,8 +224,7 @@ def opinion_type_list():
 )
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_opinion_type(name, description, metadata, force):
-    """Create a new data flag opinion type with given NAME, and optional description and metadata.
-    """
+    """Create a new data flag opinion type with given NAME, and optional description and metadata."""
     type_ = orm.DataFlagOpinionType()
 
     type_.name = name
@@ -611,8 +610,7 @@ def type_list():
 )
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_type(name, description, metadata, force):
-    """Create a new data flag type with given NAME, and optional description and metadata.
-    """
+    """Create a new data flag type with given NAME, and optional description and metadata."""
     type_ = orm.DataFlagType()
 
     type_.name = name
@@ -900,8 +898,7 @@ def revision_list():
 @click.option("--description", help="Description of data revision.", default=None)
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_revision(name, description, force):
-    """Create a new data revision with given NAME, and optional description.
-    """
+    """Create a new data revision with given NAME, and optional description."""
     revision = orm.DataRevision()
 
     revision.name = name

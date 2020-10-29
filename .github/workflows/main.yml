@@ -1,0 +1,86 @@
+name: chimedb_dataflag-ci-build
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+
+  lint-code:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+
+    - name: Install black
+      run: pip install black
+
+    - name: Check code with black
+      run: |
+        black --check .
+
+  run-tests:
+
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_USER: test
+          MYSQL_PASSWORD: test
+          MYSQL_DATABASE: test
+          MYSQL_ROOT_PASSWORD: test
+        ports:
+          - 32574:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+
+    - name: Install apt dependencies
+      run: |
+        sudo apt-get install -y libopenmpi-dev libhdf5-serial-dev
+
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Clone ch_util from private repo
+      uses: actions/checkout@v2
+      with:
+        repository: chime-experiment/ch_util
+        token: ${{ secrets.ACCESS_TOKEN }}
+        path: "ch_util"
+
+    - name: Install pytest and future
+      run: |
+        pip install pytest future
+
+    - name: Install ch_util
+      run: |
+        pip install ./ch_util
+
+    - name: Install chimedb_dataflags
+      run: |
+        pip install .
+
+    - name: Run tests
+      # Set PYTHONPATH so that relative imports in click script work when pytest imports that
+      run: PYTHONPATH=. pytest -s tests

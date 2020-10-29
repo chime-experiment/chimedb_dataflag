@@ -21,7 +21,7 @@ setup(
     zip_safe=False,
     install_requires=[
         "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
-        "ch_util @ git+ssh://git@github.com/chime-experiment/ch_util.git@master",
+        "ch_util @ git+ssh://git@github.com/chime-experiment/ch_util.git",
         "peewee >= 3.10",
         "future",
         "Click",

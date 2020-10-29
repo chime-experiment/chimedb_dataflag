@@ -1,5 +1,6 @@
 import arrow
 from click.testing import CliRunner
+import logging
 import tempfile
 import os
 import pytest
@@ -30,6 +31,10 @@ from chimedb.dataflag import (
 
 user = "Test"
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("chimedb")
+logger.setLevel("DEBUG")
+
 
 @pytest.fixture
 def db_conn():
@@ -41,12 +46,12 @@ def db_conn():
         chimedb:
             db_type:         MySQL
             db:              test
-            user_ro:         travis
-            passwd_ro:       ""
-            user_rw:         travis
-            passwd_rw:       ""
+            user_ro:         test
+            passwd_ro:       test
+            user_rw:         test
+            passwd_rw:       test
             host:            127.0.0.1
-            port:            3306
+            port:            32574
         """
         )
 

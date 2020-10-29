@@ -10,6 +10,8 @@ To add voting modes, create a vote method in the class `VotingJudge` and name it
 import arrow
 import peewee as pw
 
+from ch_util.ephemeris import csd_to_unix
+
 from .orm import (
     DataFlagVote,
     DataFlagOpinion,
@@ -67,8 +69,7 @@ class VotingJudge:
                 DataFlagOpinion.select()
                 .where(
                     DataFlagOpinion.decision != opinion.decision
-                    and DataFlagOpinion.start_time < opinion.finish_time
-                    and DataFlagOpinion.finish_time > opinion.start_time
+                    and DataFlagOpinion.lsd == opinion.lsd
                 )
                 .count()
             )
@@ -80,15 +81,18 @@ class VotingJudge:
         return flags
 
     def _translate_single_opinion(self, opinion, timestamp):
-        metadata = opinion.metadata
+
+        # Translate from opinions LSD to flags start- and finish-time.
+        start_time = csd_to_unix(opinion.lsd)
+        finish_time = csd_to_unix(opinion.lsd + 1)
+
         flag = DataFlag.create_flag(
             "vote",
-            opinion.start_time,
-            opinion.finish_time,
+            start_time,
+            finish_time,
             opinion.freq,
             opinion.instrument,
             opinion.inputs,
-            metadata,
         )
         client, _ = DataFlagClient.get_or_create(
             client_name=__name__, client_version=__version__
@@ -99,6 +103,7 @@ class VotingJudge:
             client=client,
             flag=flag,
             revision=self.revision,
+            lsd=opinion.lsd,
         )
         DataFlagVoteOpinion.create(vote=vote, opinion=opinion)
         return flag

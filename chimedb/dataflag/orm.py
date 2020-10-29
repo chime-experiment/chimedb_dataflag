@@ -112,7 +112,6 @@ class DataFlag(DataSubset):
         freq=None,
         instrument="chime",
         inputs=None,
-        metadata=None,
     ):
         """Create a flag entry.
 
@@ -185,6 +184,8 @@ class DataFlagVote(base_model):
         Voting mode name. They are implemented in `chimed.dataflag.opinion.vote`.
     client : DataFlagClient
         Client used to vote.
+    lsd : int
+        Local Sidereal Day this vote is about.
     """
 
     max_len_mode_name = 32
@@ -193,7 +194,8 @@ class DataFlagVote(base_model):
     mode = pw.CharField(max_length=max_len_mode_name)
     client = pw.ForeignKeyField(DataFlagClient)
     revision = pw.ForeignKeyField(DataRevision, backref="votes")
-    flag = pw.ForeignKeyField(DataFlag, backref="vote")
+    flag = pw.ForeignKeyField(DataFlag, backref="vote", null=True)
+    lsd = pw.IntegerField()
 
 
 class DataFlagOpinionType(DataSubsetType):
@@ -212,8 +214,8 @@ class DataFlagOpinionType(DataSubsetType):
     pass
 
 
-class DataFlagOpinion(DataSubset):
-    """A persons opinion on flagging a range of data.
+class DataFlagOpinion(base_model):
+    """A persons opinion on flagging a range of data on a given LSD.
 
     Attributes
     ----------
@@ -223,33 +225,12 @@ class DataFlagOpinion(DataSubset):
         The user who made this opinion.
     decision : str
         Decision about the data: "good", "bad" or "unsure".
-    start_time, finish_time : double
-        The start and end times as UNIX times.
-    metadata : dict
-        A JSON object with extended metadata. See below for guidelines.
+    lsd : int
+        Local Sidereal Day this opinion is about.
     creation_time, last_edit : double
         The time of creation and last edit as UNIX times.
     revision : str
         Name of data revision this opinion based on.
-
-    Notes
-    -----
-    To ensure that the added metadata is easily parseable, it should adhere
-    to a rough schema. The following common fields may be present:
-
-    `instrument` : optional
-        The name of the instrument that the flag opinion applies to. If not set,
-        assumed to apply to all instruments.
-    `freq` : optional
-        A list of integer frequency IDs that the flag opinion applies to. If not
-        present the flagging opinion is assumed to apply to *all* frequencies.
-    `inputs` : optional
-        A list of integer feed IDs (in cylinder order) that the flagging opinion applies
-        to. If not present the flagging opinion is assumed to apply to *all* inputs. For
-        this to make sense an `instrument` field is also required.
-
-    Any other useful metadata can be put straight into the metadata field,
-    though it must be accessed directly.
     """
 
     type = pw.ForeignKeyField(DataFlagOpinionType, backref="opinions")
@@ -260,11 +241,12 @@ class DataFlagOpinion(DataSubset):
     last_edit = pw.DoubleField()
     client = pw.ForeignKeyField(DataFlagClient)
     revision = pw.ForeignKeyField(DataRevision, backref="opinions")
+    lsd = pw.IntegerField()
 
     class Meta:
         indexes = (
             # create a unique index
-            (("type", "user", "start_time", "finish_time", "revision"), True),
+            (("type", "user", "lsd", "revision"), True),
         )
 
     @classmethod
@@ -276,13 +258,8 @@ class DataFlagOpinion(DataSubset):
         opiniontype,
         client_name,
         client_version,
-        start_time,
-        finish_time,
+        lsd,
         revision,
-        freq=None,
-        instrument="chime",
-        inputs=None,
-        metadata=None,
     ):
         """Create a flagging opinion entry.
 
@@ -292,20 +269,12 @@ class DataFlagOpinion(DataSubset):
             "good", "bad" or "unsure".
         opiniontype : str
             Name of opinion type. Must already exist in database.
-        start_time, finish_time : float
-            Start and end of flagged time.
+        lsd : int
+            Local Sidereal Day this opinion is about.
         username : str
             Name of the user entering the opinion.
         creation_time : double
             Unix time when the opinion was entered. Default: current time.
-        freq : list, optional
-            List of affected frequencies.
-        instrument : str, optional
-            Affected instrument.
-        inputs : list, optional
-            List of affected inputs.
-        metadata : dict
-            Extra metadata to go with the opinion entry.
         revision : str
             Name of data revision this opinion based on.
 
@@ -320,26 +289,6 @@ class DataFlagOpinion(DataSubset):
                 "Invalid value '%s' for 'decision'. Choose one of %s"
                 % (decision, cls.decision.enum_list)
             )
-
-        table_metadata = {}
-
-        if freq is not None:
-            if not isinstance(freq, list):
-                raise ValueError("freq argument (%s) must be list.", freq)
-            table_metadata["freq"] = freq
-
-        if instrument is not None:
-            table_metadata["instrument"] = instrument
-
-        if inputs is not None:
-            if not isinstance(inputs, list):
-                raise ValueError("inputs argument (%s) must be list.", inputs)
-            table_metadata["inputs"] = inputs
-
-        if metadata is not None:
-            if not isinstance(metadata, dict):
-                raise ValueError("metadata argument (%s) must be dict.", metadata)
-            table_metadata.update(metadata)
 
         # Get the flag
         type_ = DataFlagOpinionType.get(name=opiniontype)
@@ -363,9 +312,7 @@ class DataFlagOpinion(DataSubset):
             decision=decision,
             type=type_,
             client=client,
-            start_time=start_time,
-            finish_time=finish_time,
-            metadata=table_metadata,
+            lsd=lsd,
             revision=revision,
         )
 

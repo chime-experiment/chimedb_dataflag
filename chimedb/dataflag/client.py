@@ -258,13 +258,11 @@ def opinion():
 
 @opinion.command("create")
 @click.argument("type_", type=OTYPE, metavar="TYPE")
-@click.argument("start", type=TIME)
-@click.argument("finish", type=TIME)
+@click.argument("lsd", type=int)
 @click.argument(
     "decision",
     type=click.Choice(orm.DataFlagOpinion.decision.enum_list, case_sensitive=False),
 )
-@click.option("--description", help="Description of flag.", default=None)
 @click.option(
     "--user",
     "-u",
@@ -277,36 +275,17 @@ def opinion():
     help="Name of instrument to apply flag to.",
     default=None,
 )
-@click.option("--freq", type=FREQ, help="List of frequency IDs to flag.", default=None)
-@click.option("--inputs", type=INPUTS, help="List of input IDs to flag.", default=None)
-@click.option(
-    "--metadata", type=JSON, help="Extra metadata as as JSON dict.", default=None
-)
 @click.option("--revision", "-r", type=REVISION, required=True)
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def create_opinion(
     type_,
-    start,
-    finish,
+    lsd,
     decision,
-    instrument,
-    description,
     user,
-    freq,
-    inputs,
-    metadata,
     revision,
     force,
 ):
-    """Create a new data flagging opinion with given TYPE and START and FINISH times.
-
-    Times can be supplied in any format recognized by the `arrow` library. Using
-    the YYYY-MM-DDTHH:MM:SSZ format is recommended. If the flag has not ended,
-    supply the string 'null' or 'none' instead.
-
-    Optionally you can set the instrument, inputs and frequencies effected as
-    well as generic metadata.
-    """
+    """Create a new data flagging opinion with given TYPE and LSD."""
     try:
         wikiuser = db.mediawiki.MediaWikiUser.get(
             user_name=user if user else get_user()
@@ -326,8 +305,7 @@ def create_opinion(
     opinion = orm.DataFlagOpinion()
 
     opinion.type = type_
-    opinion.start_time = start.timestamp
-    opinion.finish_time = finish.timestamp
+    opinion.lsd = lsd
     opinion.decision = decision
     opinion.user = wikiuser
     opinion.client = client
@@ -335,21 +313,6 @@ def create_opinion(
     opinion.creation_time = now
     opinion.last_edit = now
     opinion.revision = revision
-
-    if metadata is None:
-        metadata = {}
-
-    # Add any optional metadata
-    if description:
-        metadata["description"] = description
-    if instrument:
-        metadata["instrument"] = instrument
-    if inputs:
-        metadata["inputs"] = inputs
-    if freq:
-        metadata["freq"] = freq
-
-    opinion.metadata = metadata
 
     if force:
         opinion.save()
@@ -372,38 +335,13 @@ def create_opinion(
     default=None,
     help="Type of flagging opinion to list. If not set, list all opinions.",
 )
-@click.option(
-    "--time",
-    type=TIMEZONE,
-    default="utc",
-    help="Timezone/format to display times in. UNIX time gives a UNIX time in seconds.",
-)
-@click.option(
-    "--start",
-    type=TIME,
-    default=None,
-    help="Return only opinions active after this point. Accepts any string that `arrow` "
-    'understands, ISO8601 is recommended, e.g. "2019-10-25T12:34:56Z".',
-)
-@click.option(
-    "--finish",
-    type=TIME,
-    default=None,
-    help="Return only opinions active before this point. Accepts the same format as `--start`",
-)
-def opinion_list(type_, time, start, finish):
+def opinion_list(type_):
     """List known revisions of TYPE."""
 
     query = orm.DataFlagOpinion.select()
 
     if type_:
         query = query.where(orm.DataFlagOpinion.type == type_)
-
-    # Add the filters on start/end times
-    if start:
-        query = query.where((orm.DataFlagOpinion.finish_time >= start.timestamp))
-    if finish:
-        query = query.where(orm.DataFlagOpinion.start_time <= finish.timestamp)
 
     query = query.join(orm.DataFlagOpinionType)
 
@@ -414,8 +352,7 @@ def opinion_list(type_, time, start, finish):
                 opinion.id,
                 opinion.decision,
                 opinion.type.name,
-                format_time(opinion.start_time),
-                format_time(opinion.finish_time),
+                opinion.lsd,
                 opinion.user.user_name,
                 format_time(opinion.creation_time),
             )
@@ -423,7 +360,7 @@ def opinion_list(type_, time, start, finish):
 
     table = tabulate.tabulate(
         rows,
-        headers=("id", "decision", "type", "start", "finish", "user", "creation_time"),
+        headers=("id", "decision", "type", "lsd", "user", "creation_time"),
     )
     click.echo(table)
 
@@ -455,53 +392,17 @@ def opinion_show(opinion, time):
     "--user", help="Change the wiki user who created the flag opinion.", default=None
 )
 @click.option(
-    "--start",
-    type=TIME,
+    "--lsd",
+    type=int,
     default=None,
-    help="Change the flag start time in format YYYY-MM-DDTHH:MM:SSZ.",
-)
-@click.option(
-    "--finish",
-    type=TIME,
-    default=None,
-    help="Change the flag end time in format YYYY-MM-DDTHH:MM:SSZ.",
-)
-@click.option(
-    "--instrument",
-    type=click.Choice(["chime", "pathfinder"]),
-    help="Add/change an instrument.",
-    default=None,
-)
-@click.option(
-    "--description", help="Add/change the description of the opinion.", default=None
-)
-@click.option(
-    "--freq",
-    type=FREQ,
-    help="Add/change the list of frequency IDs to flag.",
-    default=None,
-)
-@click.option(
-    "--inputs",
-    type=INPUTS,
-    help="Add/change the list of input IDs to flag.",
-    default=None,
-)
-@click.option(
-    "--metadata", type=JSON, help="Add/change the extra metadata.", default=None
+    help="Change the Local Sidereal Day.",
 )
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def opinion_edit(
     opinion,
     decision,
     type_,
-    start,
-    finish,
-    instrument,
-    description,
-    freq,
-    inputs,
-    metadata,
+    lsd,
     force,
     user,
 ):
@@ -528,24 +429,8 @@ def opinion_edit(
     if type_:
         opinion.type = type_
 
-    if start:
-        opinion.start_time = start.timestamp
-
-    if finish:
-        opinion.finish_time = finish.timestamp
-
-    if metadata:
-        opinion.metadata.update(metadata)
-
-    # Edit any optional metadata
-    if description:
-        opinion.metadata["description"] = description
-    if instrument:
-        opinion.metadata["instrument"] = instrument
-    if inputs:
-        opinion.metadata["inputs"] = inputs
-    if freq:
-        opinion.metadata["freq"] = freq
+    if lsd:
+        opinion.lsd = lsd
 
     opinion.last_edit = arrow.utcnow().timestamp
 
@@ -978,23 +863,16 @@ def format_opinion(opinion, timefmt="utc"):
     template = """<b>id</b>: {id}
 <b>decision</b>: {decision}
 <b>type</b>: {type}
-<b>start</b>: {start}
-<b>finish</b>: {finish}
+<b>lsd</b>: {lsd}
 <b>user</b>: {user}
 <b>client</b>: {client_name} ({client_version})
 <b>creation_time</b>: {creation_time}
 <b>last_edit</b>: {last_edit}
-<b>metadata</b>: {metadata}"""
-
-    metadata = (
-        "" if opinion.metadata is None else "\n" + format_metadata(opinion.metadata)
-    )
+"""
 
     tdict = {
         "id": opinion.id,
-        "start": format_time(opinion.start_time, timefmt),
-        "finish": format_time(opinion.finish_time, timefmt),
-        "metadata": metadata,
+        "lsd": opinion.lsd,
         "type": opinion.type.name,
         "user": opinion.user.user_name,
         "client_name": opinion.client.client_name,

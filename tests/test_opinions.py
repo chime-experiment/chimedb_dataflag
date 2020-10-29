@@ -75,10 +75,6 @@ def test_create_opinions(db_conn):
     # Create revision
     revision, _ = DataRevision.get_or_create(name="test", description="foo")
 
-    metadata = {}
-    metadata["description"] = "I'm not sure, but"
-    metadata["instrument"] = "chime"
-
     with pytest.raises(db.exceptions.ValidationError):
         DataFlagOpinion.create_opinion(
             user,
@@ -87,9 +83,7 @@ def test_create_opinions(db_conn):
             type_.name,
             "test",
             "0.0.0",
-            time.time(),
-            time.time(),
-            metadata=metadata,
+            "2111",
             revision=revision.name,
         )
 
@@ -101,9 +95,7 @@ def test_create_opinions(db_conn):
             type_.name,
             "test",
             "0.0.0",
-            time.time(),
-            time.time(),
-            metadata=metadata,
+            "2111",
             revision=revision.name,
         )
 
@@ -114,9 +106,7 @@ def test_create_opinions(db_conn):
         type_.name,
         "test",
         "0.0.0",
-        time.time(),
-        time.time(),
-        metadata=metadata,
+        "2111",
         revision=revision.name,
     )
 
@@ -154,20 +144,15 @@ def test_click(test_create_opinions):
     assert result.exit_code == 0, result.output
     assert "created for testing" in result.output
 
-    utc = arrow.utcnow()
-    start = str(utc.format())
-    utc = utc.shift(hours=-1)
-    finish = str(utc.format())
-
     result = runner.invoke(
         create_opinion,
-        ["test", start, finish, "idontknow", "-u", user, "-r", "test", "--force"],
+        ["test", "2112", "idontknow", "-u", user, "-r", "test", "--force"],
     )
     assert "Invalid value" in result.output
 
     result = runner.invoke(
         create_opinion,
-        ["test", start, finish, "good", "-u", user, "-r" "test", "--force"],
+        ["test", "2112", "good", "-u", user, "-r" "test", "--force"],
     )
     assert result.exit_code == 0, result.output
 

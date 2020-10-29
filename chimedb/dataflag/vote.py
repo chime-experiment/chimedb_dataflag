@@ -82,18 +82,20 @@ class VotingJudge:
 
     def _translate_single_opinion(self, opinion, timestamp):
 
-        # Translate from opinions LSD to flags start- and finish-time.
-        start_time = csd_to_unix(opinion.lsd)
-        finish_time = csd_to_unix(opinion.lsd + 1)
+        flag = None
+        if opinion.decision == "bad":
+            # Translate from opinions LSD to flags start- and finish-time.
+            start_time = csd_to_unix(opinion.lsd)
+            finish_time = csd_to_unix(opinion.lsd + 1)
 
-        flag = DataFlag.create_flag(
-            "vote",
-            start_time,
-            finish_time,
-            opinion.freq,
-            opinion.instrument,
-            opinion.inputs,
-        )
+            flag = DataFlag.create_flag(
+                "vote",
+                start_time,
+                finish_time,
+                opinion.freq,
+                opinion.instrument,
+                opinion.inputs,
+            )
         client, _ = DataFlagClient.get_or_create(
             client_name=__name__, client_version=__version__
         )

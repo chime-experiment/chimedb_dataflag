@@ -113,6 +113,7 @@ def test_create_opinions(db_conn):
         "0.0.0",
         "2111",
         revision=revision.name,
+        notes="I really don't know!",
     )
 
 

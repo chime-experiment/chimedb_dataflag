@@ -299,6 +299,7 @@ class DataFlagOpinion(base_model):
     client = pw.ForeignKeyField(DataFlagClient)
     revision = pw.ForeignKeyField(DataRevision, backref="opinions")
     lsd = pw.IntegerField()
+    notes = pw.TextField(null=True)
 
     class Meta:
         indexes = (
@@ -317,6 +318,7 @@ class DataFlagOpinion(base_model):
         client_version,
         lsd,
         revision,
+        notes=None,
     ):
         """Create a flagging opinion entry.
 
@@ -334,6 +336,8 @@ class DataFlagOpinion(base_model):
             Unix time when the opinion was entered. Default: current time.
         revision : str
             Name of data revision this opinion based on.
+        notes: str
+            Optional comment on the decision.
 
         Returns
         -------
@@ -371,6 +375,7 @@ class DataFlagOpinion(base_model):
             client=client,
             lsd=lsd,
             revision=revision,
+            notes=notes,
         )
 
         return opinion

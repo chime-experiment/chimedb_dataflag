@@ -270,10 +270,11 @@ def opinion():
     default=None,
 )
 @click.option(
-    "--instrument",
-    type=click.Choice(["chime", "pathfinder"]),
-    help="Name of instrument to apply flag to.",
+    "--notes",
+    "-n",
+    help="Optional comments on the decision.",
     default=None,
+    type=str,
 )
 @click.option("--revision", "-r", type=REVISION, required=True)
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
@@ -283,6 +284,7 @@ def create_opinion(
     decision,
     user,
     revision,
+    notes,
     force,
 ):
     """Create a new data flagging opinion with given TYPE and LSD."""
@@ -313,6 +315,7 @@ def create_opinion(
     opinion.creation_time = now
     opinion.last_edit = now
     opinion.revision = revision
+    opinion.notes = notes
 
     if force:
         opinion.save()
@@ -354,13 +357,14 @@ def opinion_list(type_):
                 opinion.type.name,
                 opinion.lsd,
                 opinion.user.user_name,
+                opinion.notes,
                 format_time(opinion.creation_time),
             )
         )
 
     table = tabulate.tabulate(
         rows,
-        headers=("id", "decision", "type", "lsd", "user", "creation_time"),
+        headers=("id", "decision", "type", "lsd", "user", "notes", "creation_time"),
     )
     click.echo(table)
 
@@ -397,12 +401,19 @@ def opinion_show(opinion, time):
     default=None,
     help="Change the Local Sidereal Day.",
 )
+@click.option(
+    "--notes",
+    type=str,
+    default=None,
+    help="Change the comment on the decision.",
+)
 @click.option("--force", "-f", is_flag=True, help="Create without prompting.")
 def opinion_edit(
     opinion,
     decision,
     type_,
     lsd,
+    notes,
     force,
     user,
 ):
@@ -431,6 +442,9 @@ def opinion_edit(
 
     if lsd:
         opinion.lsd = lsd
+
+    if notes:
+        opinion.notes = notes
 
     opinion.last_edit = arrow.utcnow().timestamp
 
@@ -866,6 +880,7 @@ def format_opinion(opinion, timefmt="utc"):
 <b>lsd</b>: {lsd}
 <b>user</b>: {user}
 <b>client</b>: {client_name} ({client_version})
+<b>notes</b>: {notes}
 <b>creation_time</b>: {creation_time}
 <b>last_edit</b>: {last_edit}
 """
@@ -877,6 +892,7 @@ def format_opinion(opinion, timefmt="utc"):
         "user": opinion.user.user_name,
         "client_name": opinion.client.client_name,
         "client_version": opinion.client.client_version,
+        "notes": opinion.notes,
         "decision": opinion.decision,
         "creation_time": format_time(opinion.creation_time, timefmt),
         "last_edit": format_time(opinion.last_edit, timefmt),

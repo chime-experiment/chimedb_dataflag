@@ -1,12 +1,6 @@
 """
 Table definitions for the CHIME data flagging (and opinion) tools
 """
-# === Start Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function, unicode_literals
-from future.builtins import *  # noqa  pylint: disable=W0401, W0614
-from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
-
-# === End Python 2/3 compatibility
 
 from .base_models import DataSubsetType
 
@@ -20,6 +14,8 @@ import peewee as pw
 # =======
 
 import logging
+
+import numpy as np
 
 _logger = logging.getLogger("chimedb")
 _logger.addHandler(logging.NullHandler())
@@ -117,6 +113,7 @@ class DataFlag(base_model):
         freq=None,
         instrument="chime",
         inputs=None,
+        metadata=None,
     ):
         """Create a flag entry.
 

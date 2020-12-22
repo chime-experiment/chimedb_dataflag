@@ -1,15 +1,5 @@
-# === Start Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-from future.builtins import *  # noqa  pylint: disable=W0401, W0614
-from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
-
-# === End Python 2/3 compatibility
-
 from setuptools import setup
 
-import codecs
-import os
-import re
 import versioneer
 
 
@@ -19,17 +9,20 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=["chimedb.dataflag"],
     zip_safe=False,
+    python_requires=">=3.7",
     install_requires=[
         "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
-        "ch_util @ git+ssh://git@github.com/chime-experiment/ch_util.git",
         "peewee >= 3.10",
-        "future",
+        "numpy",
         "Click",
         "ansimarkup",
         "tabulate",
         "PyYAML",
         "arrow",
     ],
+    extras_requires={
+        "vote": ["ch_util @ git+ssh://git@github.com/chime-experiment/ch_util.git"],
+    },
     entry_points="""
         [console_scripts]
         cdf=chimedb.dataflag.client:cli

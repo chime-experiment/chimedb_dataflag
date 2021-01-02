@@ -75,11 +75,11 @@ jobs:
 
     - name: Install ch_util
       run: |
-        pip install ./ch_util
+        pip install --use-deprecated=legacy-resolver ./ch_util
 
     - name: Install chimedb_dataflags
       run: |
-        pip install .
+        pip install --use-deprecated=legacy-resolver .
 
     - name: Run tests
       # Set PYTHONPATH so that relative imports in click script work when pytest imports that

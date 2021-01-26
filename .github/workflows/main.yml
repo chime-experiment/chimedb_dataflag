@@ -68,7 +68,7 @@ jobs:
 
     - name: Install chimedb_dataflags
       run: |
-        pip install .
+        pip install .[vote]
 
     - name: Run tests
       # Set PYTHONPATH so that relative imports in click script work when pytest imports that

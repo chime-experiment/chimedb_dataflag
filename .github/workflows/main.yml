@@ -62,20 +62,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Clone ch_util from private repo
-      uses: actions/checkout@v2
-      with:
-        repository: chime-experiment/ch_util
-        token: ${{ secrets.ACCESS_TOKEN }}
-        path: "ch_util"
-
     - name: Install pytest and future
       run: |
         pip install pytest future
-
-    - name: Install ch_util
-      run: |
-        pip install ./ch_util
 
     - name: Install chimedb_dataflags
       run: |

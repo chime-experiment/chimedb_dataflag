@@ -20,7 +20,7 @@ setup(
         "PyYAML",
         "arrow",
     ],
-    extras_requires={
+    extras_require={
         "vote": ["ch_util @ git+https://github.com/chime-experiment/ch_util.git"],
     },
     entry_points="""

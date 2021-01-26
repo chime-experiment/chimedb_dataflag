@@ -21,7 +21,7 @@ setup(
         "arrow",
     ],
     extras_requires={
-        "vote": ["ch_util @ git+ssh://git@github.com/chime-experiment/ch_util.git"],
+        "vote": ["ch_util @ git+https://github.com/chime-experiment/ch_util.git"],
     },
     entry_points="""
         [console_scripts]

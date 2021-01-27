@@ -64,11 +64,11 @@ jobs:
 
     - name: Install pytest and future and dateutil
       run: |
-        pip install pytest future python-dateutil
+          pip install pytest future python-dateutil git+https://github.com/chime-experiment/ch_util.git
 
     - name: Install chimedb_dataflags
       run: |
-        pip install .[vote]
+        pip install .
 
     - name: Run tests
       # Set PYTHONPATH so that relative imports in click script work when pytest imports that

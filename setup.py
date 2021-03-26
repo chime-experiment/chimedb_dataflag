@@ -18,7 +18,7 @@ setup(
         "ansimarkup",
         "tabulate",
         "PyYAML",
-        "arrow",
+        "arrow >= 1.0",
     ],
     extras_require={
         "vote": ["ch_util @ git+https://github.com/chime-experiment/ch_util.git"],

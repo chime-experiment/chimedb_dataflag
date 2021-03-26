@@ -311,7 +311,7 @@ def create_opinion(
     opinion.decision = decision
     opinion.user = wikiuser
     opinion.client = client
-    now = arrow.utcnow().timestamp
+    now = arrow.utcnow().int_timestamp
     opinion.creation_time = now
     opinion.last_edit = now
     opinion.revision = revision
@@ -446,7 +446,7 @@ def opinion_edit(
     if notes:
         opinion.notes = notes
 
-    opinion.last_edit = arrow.utcnow().timestamp
+    opinion.last_edit = arrow.utcnow().int_timestamp
 
     if force:
         opinion.save()
@@ -574,11 +574,11 @@ def flag_list(type_, time, start, finish):
     # Add the filters on start/end times
     if start:
         query = query.where(
-            (orm.DataFlag.finish_time >= start.timestamp)
+            (orm.DataFlag.finish_time >= start.int_timestamp)
             | orm.DataFlag.finish_time.is_null()
         )
     if finish:
-        query = query.where(orm.DataFlag.start_time <= finish.timestamp)
+        query = query.where(orm.DataFlag.start_time <= finish.int_timestamp)
 
     query = query.join(orm.DataFlagType)
 
@@ -643,8 +643,8 @@ def create_flag(
     flag = orm.DataFlag()
 
     flag.type = type_
-    flag.start_time = start.timestamp
-    flag.finish_time = finish.timestamp if finish != "null" else None
+    flag.start_time = start.int_timestamp
+    flag.finish_time = finish.int_timestamp if finish != "null" else None
 
     if metadata is None:
         metadata = {}
@@ -747,10 +747,10 @@ def edit_flag(
         flag.type = type_
 
     if start:
-        flag.start_time = start.timestamp
+        flag.start_time = start.int_timestamp
 
     if finish:
-        flag.finish_time = finish.timestamp if finish != "null" else None
+        flag.finish_time = finish.int_timestamp if finish != "null" else None
 
     if metadata:
         flag.metadata.update(metadata)

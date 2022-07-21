@@ -20,7 +20,7 @@ from .orm import (
     DataFlagVoteOpinion,
     DataRevision,
 )
-from . import __version__
+# from . import __version__
 
 
 class VotingJudge:
@@ -97,7 +97,7 @@ class VotingJudge:
                 opinion.inputs,
             )
         client, _ = DataFlagClient.get_or_create(
-            client_name=__name__, client_version=__version__
+            client_name=__name__, client_version=globals()['__version__']
         )
         vote = DataFlagVote.create(
             time=timestamp,

@@ -190,7 +190,7 @@ class DataFlag(base_model):
         """An array for the frequencies flagged (`True` if the flag applies)."""
 
         # TODO: hard coded for CHIME
-        mask = np.ones(1024, dtype=np.bool)
+        mask = np.ones(1024, dtype=bool)
 
         if self.freq is not None:
             mask[self.freq] = False
@@ -213,7 +213,7 @@ class DataFlag(base_model):
             return None
 
         inp_dict = {"chime": 2048, "pathfinder": 256}
-        mask = np.ones(inp_dict[self.instrument], dtype=np.bool)
+        mask = np.ones(inp_dict[self.instrument], dtype=bool)
 
         if self.inputs is not None:
             mask[self.inputs] = False

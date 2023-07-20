@@ -81,7 +81,6 @@ class VotingJudge:
         return flags
 
     def _translate_single_opinion(self, opinion, timestamp):
-
         flag = None
         if opinion.decision == "bad":
             # Translate from opinions LSD to flags start- and finish-time.

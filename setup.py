@@ -9,7 +9,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     packages=["chimedb.dataflag"],
     zip_safe=False,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=[
         "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
         "peewee >= 3.10",

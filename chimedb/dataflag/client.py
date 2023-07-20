@@ -25,7 +25,6 @@ class OType(click.ParamType):
     name = "opinion type"
 
     def convert(self, value, param, ctx):
-
         _typedict = {dt.name: dt for dt in orm.DataFlagOpinionType.select()}
 
         if value not in _typedict:
@@ -43,7 +42,6 @@ class FType(click.ParamType):
     name = "flag type"
 
     def convert(self, value, param, ctx):
-
         _typedict = {dt.name: dt for dt in orm.DataFlagType.select()}
 
         if value not in _typedict:
@@ -60,7 +58,6 @@ class Flag(click.ParamType):
     name = "flag"
 
     def convert(self, value, param, ctx):
-
         try:
             f = orm.DataFlag.get(id=value)
         except pw.DoesNotExist:
@@ -77,7 +74,6 @@ class Opinion(click.ParamType):
     name = "opinion"
 
     def convert(self, value, param, ctx):
-
         try:
             f = orm.DataFlagOpinion.get(id=value)
         except pw.DoesNotExist:
@@ -95,7 +91,6 @@ class Revision(click.ParamType):
     name = "revision"
 
     def convert(self, value, param, ctx):
-
         try:
             f = orm.DataRevision.get(name=value)
         except pw.DoesNotExist:
@@ -117,7 +112,6 @@ class Time(click.ParamType):
         self.allow_null = allow_null
 
     def convert(self, value, param, ctx):
-
         null_values = ["null", "Null", "none", "None"]
 
         if value in null_values:
@@ -143,7 +137,6 @@ class ListOfType(click.ParamType):
         self.type = type_
 
     def convert(self, value, param, ctx):
-
         try:
             l = ast.literal_eval(value)
         except (SyntaxError, ValueError):
@@ -164,7 +157,6 @@ class JsonDictType(click.ParamType):
     name = "jsondict"
 
     def convert(self, value, param, ctx):
-
         try:
             d = json.loads(value)
         except json.decoder.JSONDecodeError:
@@ -338,13 +330,34 @@ def create_opinion(
     default=None,
     help="Type of flagging opinion to list. If not set, list all opinions.",
 )
-def opinion_list(type_):
+@click.option(
+    "--user",
+    "-u",
+    help="Wiki user to search. If no user is supplied, all users are returned.",
+    default=None,
+)
+@click.option(
+    "--revision",
+    "-r",
+    type=REVISION,
+    help="Opinion revision to search. If none supplied, all revisions are returned",
+    default=None,
+)
+def opinion_list(type_, user, revision):
     """List known revisions of TYPE."""
 
     query = orm.DataFlagOpinion.select()
 
     if type_:
         query = query.where(orm.DataFlagOpinion.type == type_)
+
+    if user:
+        user = user[0].upper() + user[1:]
+        wikiuser = db.mediawiki.MediaWikiUser.get(user_name=user)
+        query = query.where(orm.DataFlagOpinion.user == wikiuser)
+
+    if revision:
+        query = query.where(orm.DataFlagOpinion.revision == revision)
 
     query = query.join(orm.DataFlagOpinionType)
 
@@ -356,6 +369,7 @@ def opinion_list(type_):
                 opinion.decision,
                 opinion.type.name,
                 opinion.lsd,
+                opinion.revision,
                 opinion.user.user_name,
                 opinion.notes,
                 format_time(opinion.creation_time),
@@ -364,7 +378,16 @@ def opinion_list(type_):
 
     table = tabulate.tabulate(
         rows,
-        headers=("id", "decision", "type", "lsd", "user", "notes", "creation_time"),
+        headers=(
+            "id",
+            "decision",
+            "type",
+            "lsd",
+            "revision",
+            "user",
+            "notes",
+            "creation_time",
+        ),
     )
     click.echo(table)
 

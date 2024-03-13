@@ -378,6 +378,33 @@ class DataFlagOpinion(base_model):
         return opinion
 
 
+class DataFlagCategoryType(base_model):
+    """Categories for each day of data.
+
+    Attributes
+    ----------
+    name
+        The name of the category.
+    description
+        A full description of the category.
+    """
+
+    # NOTE: this could almost use the DataSubsetType baseclass except the metadata field
+    # in that isn't really applicable
+    name = pw.CharField(max_length=64, unique=True)
+    description = pw.TextField(null=True)
+
+
+class DataFlagOpinionCategory(base_model):
+    """Many-to-many relationship giving the categories identified for each opinion."""
+
+    opinion = pw.ForeignKeyField(DataFlagOpinion)
+    category = pw.ForeignKeyField(DataFlagCategoryType)
+
+    class Meta:
+        primary_key = pw.CompositeKey("opinion", "category")
+
+
 class DataFlagVoteOpinion(base_model):
     """Many-to-many relationship between votes and opinions."""
 

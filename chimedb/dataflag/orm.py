@@ -410,3 +410,6 @@ class DataFlagVoteOpinion(base_model):
 
     vote = pw.ForeignKeyField(DataFlagVote)
     opinion = pw.ForeignKeyField(DataFlagOpinion)
+
+    class Meta:
+        primary_key = pw.CompositeKey("vote", "opinion")

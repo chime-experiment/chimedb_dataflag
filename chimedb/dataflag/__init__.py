@@ -45,6 +45,8 @@ from .orm import (
     DataRevision,
     DataFlagType,
     DataFlag,
+    DataFlagCategoryType,
+    DataFlagOpinionCategory,
 )
 
 from . import _version

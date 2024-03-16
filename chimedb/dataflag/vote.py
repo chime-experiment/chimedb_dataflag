@@ -10,8 +10,6 @@ To add voting modes, create a vote method in the class `VotingJudge` and name it
 import arrow
 import peewee as pw
 
-from ch_util.ephemeris import csd_to_unix
-
 from .orm import (
     DataFlagVote,
     DataFlagOpinion,
@@ -81,6 +79,8 @@ class VotingJudge:
         return flags
 
     def _translate_single_opinion(self, opinion, timestamp):
+        from ch_util.ephemeris import csd_to_unix
+
         flag = None
         if opinion.decision == "bad":
             # Translate from opinions LSD to flags start- and finish-time.

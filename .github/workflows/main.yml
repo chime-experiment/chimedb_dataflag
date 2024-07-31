@@ -13,10 +13,10 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v5
       with:
         python-version: 3.12
 
@@ -35,7 +35,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.4
         env:
           MYSQL_USER: test
           MYSQL_PASSWORD: test
@@ -46,34 +46,24 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Update apt-get
-      run: sudo apt-get update
 
     - name: Install apt dependencies
       run: |
         sudo apt-get install -y libopenmpi-dev libhdf5-serial-dev
 
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install pytest and future and dateutil
-      run: |
-          pip install pytest future python-dateutil git+https://github.com/chime-experiment/ch_ephem.git
-
     - name: Install chimedb_dataflags
-      run: |
-        pip install .
+      run: pip install .
+
+    - name: Install test requirements
+      run: pip install .[test]
 
     - name: Run tests
       # Set PYTHONPATH so that relative imports in click script work when pytest imports that

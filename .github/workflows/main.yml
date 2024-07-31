@@ -69,7 +69,7 @@ jobs:
 
     - name: Install pytest and future and dateutil
       run: |
-          pip install pytest future python-dateutil git+https://github.com/chime-experiment/ch_util.git
+          pip install pytest future python-dateutil git+https://github.com/chime-experiment/ch_ephem.git
 
     - name: Install chimedb_dataflags
       run: |

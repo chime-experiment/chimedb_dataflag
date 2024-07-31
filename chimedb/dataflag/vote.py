@@ -79,13 +79,13 @@ class VotingJudge:
         return flags
 
     def _translate_single_opinion(self, opinion, timestamp):
-        from ch_util.ephemeris import csd_to_unix
+        from ch_ephem.observers import chime
 
         flag = None
         if opinion.decision == "bad":
             # Translate from opinions LSD to flags start- and finish-time.
-            start_time = csd_to_unix(opinion.lsd)
-            finish_time = csd_to_unix(opinion.lsd + 1)
+            start_time = chime.lsd_to_unix(opinion.lsd)
+            finish_time = chime.lsd_to_unix(opinion.lsd + 1)
 
             flag = DataFlag.create_flag(
                 "vote",

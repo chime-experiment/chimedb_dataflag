@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chimedb.dataflag"
+authors = [
+  {name = "The CHIME Collaboration", email = "dvw@phas.ubc.ca"}
+]
+description = "CHIME data flag tools"
+requires-python = ">=3.9"
+dynamic = ["readme", "version"]
+license = {file = "LICENSE"}
+dependencies = [
+    "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
+    "ansimarkup",
+    "arrow >= 1.0",
+    "Click",
+    "numpy",
+    "peewee >= 3.10",
+    "PyYAML",
+    "tabulate"
+]
+
+[project.scripts]
+cdf = "chimedb.dataflag.client:cli"
+
+[project.optional-dependencies]
+test = [
+  "ch_ephem @ git+https://github.com/chime-experiment/ch_ephem.git",
+  "pytest >= 7.0",
+  "python-dateutil"
+]
+vote = [
+  "ch_ephem @ git+https://github.com/chime-experiment/ch_ephem.git"
+]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools-git-versioning]
+enabled = true

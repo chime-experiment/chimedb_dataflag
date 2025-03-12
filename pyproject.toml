@@ -8,7 +8,7 @@ authors = [
   {name = "The CHIME Collaboration", email = "dvw@phas.ubc.ca"}
 ]
 description = "CHIME data flag tools"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["readme", "version"]
 license = {file = "LICENSE"}
 dependencies = [
@@ -40,3 +40,6 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.setuptools-git-versioning]
 enabled = true
+
+[tool.ruff]
+target-version = "py310"

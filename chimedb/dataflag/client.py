@@ -138,17 +138,17 @@ class ListOfType(click.ParamType):
 
     def convert(self, value, param, ctx):
         try:
-            l = ast.literal_eval(value)
+            listval = ast.literal_eval(value)
         except (SyntaxError, ValueError):
             self.fail('Could not parse "%s" into list.' % value)
 
-        if not isinstance(l, list):
+        if not isinstance(listval, list):
             self.fail('Could not parse "%s" into list.' % value)
 
-        if not all([isinstance(x, self.type) for x in l]):
+        if not all([isinstance(x, self.type) for x in listval]):
             self.fail('Not all values were of type "%s"' % repr(self.type))
 
-        return l
+        return listval
 
 
 class JsonDictType(click.ParamType):

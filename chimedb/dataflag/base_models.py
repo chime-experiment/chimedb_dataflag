@@ -2,10 +2,9 @@
 Base classes for table definitions for the CHIME data flagging (and opinion) tools.
 """
 
-from chimedb.core.orm import base_model, JSONDictField, EnumField
+from chimedb.core.orm import base_model, JSONDictField
 
 import logging
-import numpy as np
 import peewee as pw
 
 _logger = logging.getLogger("chimedb")

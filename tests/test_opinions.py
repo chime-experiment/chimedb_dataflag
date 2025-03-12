@@ -173,11 +173,11 @@ def test_click(test_create_opinions):
 
     def parse_opinion(result):
         times = [0, 0]
-        for l in result.splitlines():
-            if l.startswith("creation_time:"):
-                times[0] = l[15:]
-            elif l.startswith("last_edit:"):
-                times[1] = l[11:]
+        for val in result.splitlines():
+            if val.startswith("creation_time:"):
+                times[0] = val[15:]
+            elif val.startswith("last_edit:"):
+                times[1] = val[11:]
         return times
 
     result = runner.invoke(opinion_show, [str(test_create_opinions.id)])

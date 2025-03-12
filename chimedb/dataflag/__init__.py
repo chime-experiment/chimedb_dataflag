@@ -37,16 +37,16 @@ Voting
 """
 
 from .orm import (
-    DataFlagClient,
-    DataFlagOpinionType,
-    DataFlagOpinion,
-    DataFlagVote,
-    DataFlagVoteOpinion,
-    DataRevision,
-    DataFlagType,
-    DataFlag,
-    DataFlagCategoryType,
-    DataFlagOpinionCategory,
+    DataFlagClient as DataFlagClient,
+    DataFlagOpinionType as DataFlagOpinionType,
+    DataFlagOpinion as DataFlagOpinion,
+    DataFlagVote as DataFlagVote,
+    DataFlagVoteOpinion as DataFlagVoteOpinion,
+    DataRevision as DataRevision,
+    DataFlagType as DataFlagType,
+    DataFlag as DataFlag,
+    DataFlagCategoryType as DataFlagCategoryType,
+    DataFlagOpinionCategory as DataFlagOpinionCategory,
 )
 
 from importlib.metadata import version, PackageNotFoundError

@@ -28,7 +28,6 @@ from chimedb.dataflag import (
     DataRevision,
 )
 
-
 user = "Test"
 
 logging.basicConfig(level=logging.DEBUG)
@@ -39,10 +38,9 @@ logger.setLevel("DEBUG")
 @pytest.fixture
 def db_conn():
     """Set up chimedb.core for testing with a local dummy DB."""
-    (fd, rcfile) = tempfile.mkstemp(text=True)
+    fd, rcfile = tempfile.mkstemp(text=True)
     with os.fdopen(fd, "a") as rc:
-        rc.write(
-            """\
+        rc.write("""\
         chimedb:
             db_type:         MySQL
             db:              test
@@ -52,8 +50,7 @@ def db_conn():
             passwd_rw:       test
             host:            127.0.0.1
             port:            32574
-        """
-        )
+        """)
 
     # Tell chimedb where the database connection config is
     assert os.path.isfile(rcfile), "Could not find {}.".format(rcfile)
